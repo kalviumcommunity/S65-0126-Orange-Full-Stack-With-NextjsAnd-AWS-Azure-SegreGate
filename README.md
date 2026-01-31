@@ -1,0 +1,1 @@
+# S65-0126-Orange-Full-Stack-With-NextjsAnd-AWS-Azure-SegreGate
