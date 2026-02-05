@@ -5,7 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:development": "NODE_ENV=development next build",
+    "build:staging": "NODE_ENV=staging next build",
+    "build:production": "NODE_ENV=production next build",
     "start": "next start",
+    "start:development": "NODE_ENV=development next start",
+    "start:staging": "NODE_ENV=staging next start",
+    "start:production": "NODE_ENV=production next start",
     "lint": "eslint"
   },
   "dependencies": {
