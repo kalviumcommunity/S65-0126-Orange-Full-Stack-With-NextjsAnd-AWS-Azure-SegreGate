@@ -1,5 +1,51 @@
 # S65-0126-Orange-Full-Stack-With-NextjsAnd-AWS-Azure-SegreGate
 
+A Next.js application demonstrating advanced data fetching and rendering techniques with different rendering modes (Static, SSG, SSR, ISR) for optimal performance across various page types.
+
+## Folder Structure
+
+- `app/` - Next.js App Router directory containing pages and layouts
+- `public/` - Static assets served by Next.js
+- `package.json` - Project dependencies and scripts
+- `next.config.ts` - Next.js configuration
+- `tsconfig.json` - TypeScript configuration
+- Config files: `eslint.config.mjs`, `postcss.config.mjs`, etc.
+
+## Setup Instructions
+
+### Installation
+
+1. Ensure you have Node.js (version 18 or later) and pnpm installed
+2. Clone the repository
+3. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+
+### Local Development
+
+To run the application in development mode:
+
+```bash
+pnpm dev
+```
+
+The application will be available at `http://localhost:3000`
+
+### Build and Run
+
+To build for production:
+
+```bash
+pnpm build
+```
+
+To start the production build:
+
+```bash
+pnpm start
+```
+
 ## Advanced Data Fetching & Rendering 
 
 ### Rendering Modes Used
