@@ -1164,6 +1164,182 @@ REFRESH_TOKEN_SECRET=your-long-random-refresh-secret-key
 
 ---
 
+## Frontend Architecture Foundation
+
+### Page Routing & Dynamic Routes
+
+SegreGate uses Next.js 13+ App Router with file-based routing for intuitive page structure and dynamic parameters.
+
+**Route Structure:**
+```
+app/
+ ├── page.tsx                    → Home (public)
+ ├── login/page.tsx              → Login page
+ ├── dashboard/page.tsx          → Dashboard (protected)
+ ├── users/
+ │   └── [id]/page.tsx           → Dynamic user profile
+ ├── not-found.tsx               → Custom 404 page
+ └── layout.tsx                  → Global layout wrapper
+```
+
+**Public Routes:**
+- `/` — Home page (everyone)
+- `/login` — Login page (unauthenticated users)
+- `/not-found` — Custom 404 error page
+
+**Protected Routes:**
+- `/dashboard` — User dashboard (requires authentication)
+- `/users/[id]` — Dynamic user profile (requires authentication)
+
+**Dynamic Routes Example:**
+```bash
+# Visit any user profile with dynamic [id] parameter
+curl http://localhost:3000/users/1
+curl http://localhost:3000/users/42
+```
+
+### Component Architecture
+
+Reusable component structure ensures consistency, maintainability, and scalability:
+
+**Folder Structure:**
+```
+components/
+ ├── layout/
+ │   ├── Header.tsx              → Navigation header
+ │   ├── Sidebar.tsx             → Navigation sidebar
+ │   └── LayoutWrapper.tsx        → Layout container
+ └── ui/
+     └── Button.tsx              → Reusable button
+```
+
+**Component Hierarchy:**
+```
+LayoutWrapper
+ ├── Header (navigation, user info, logout)
+ ├── Sidebar (dynamic links based on role)
+ └── Main Content (page children)
+```
+
+**Key Components:**
+
+1. **Header** (`components/layout/Header.tsx`)
+   - Sticky navigation at top
+   - User info and logout button
+   - Responsive burger menu toggle
+   - Theme toggle button
+
+2. **Sidebar** (`components/layout/Sidebar.tsx`)
+   - Dynamic navigation links based on authentication and role
+   - Public links (Home)
+   - Authenticated links (Dashboard, Reports, Profile)
+   - Admin-only links (conditionally rendered)
+   - Collapsible on mobile, always visible on desktop
+
+3. **LayoutWrapper** (`components/layout/LayoutWrapper.tsx`)
+   - Composes Header + Sidebar + Main content
+   - Applied globally via `app/layout.tsx`
+   - Ensures consistent UI across all pages
+
+4. **Button** (`components/ui/Button.tsx`)
+   - Reusable with variants: `primary`, `secondary`, `danger`
+   - Supports disabled state, custom classes, and event handlers
+   - Tailwind-based styling for consistency
+
+### State Management with Context & Hooks
+
+Global state management using React Context API and custom hooks eliminates prop-drilling and centralizes logic.
+
+**Architecture:**
+```
+AuthProvider (app/layout.tsx)
+ └── AuthContext (context/AuthContext.tsx)
+      └── Custom Hook: useAuth()
+
+UIProvider (app/layout.tsx)
+ └── UIContext (context/UIContext.tsx)
+      └── Custom Hook: useUI()
+```
+
+**AuthContext** (`context/AuthContext.tsx`)
+```typescript
+interface AuthContextType {
+  user: User | null;                    // Currently logged-in user
+  isAuthenticated: boolean;               // Login status
+  login: (user: User) => void;           // Set user and auth state
+  logout: () => void;                    // Clear user and auth state
+}
+```
+
+**UIContext** (`context/UIContext.tsx`)
+```typescript
+interface UIContextType {
+  theme: "light" | "dark";               // Current theme
+  toggleTheme: () => void;               // Switch theme
+  sidebarOpen: boolean;                  // Sidebar visibility
+  toggleSidebar: () => void;             // Toggle sidebar
+}
+```
+
+**Custom Hooks:**
+
+1. **useAuth()** (`hooks/useAuth.ts`)
+   - Provides access to authentication state
+   - Usage: `const { user, isAuthenticated, login, logout } = useAuth();`
+   - Access user data, check login status, trigger login/logout
+
+2. **useUI()** (`hooks/useUI.ts`)
+   - Provides access to UI state (theme, sidebar)
+   - Usage: `const { theme, toggleTheme, sidebarOpen, toggleSidebar } = useUI();`
+   - Theme switching, sidebar toggle for responsive design
+
+**Example Usage in Components:**
+```tsx
+"use client";
+import { useAuth } from "@/hooks/useAuth";
+
+export default function Dashboard() {
+  const { isAuthenticated, user } = useAuth();
+
+  if (!isAuthenticated) {
+    return <p>Please log in to access dashboard</p>;
+  }
+
+  return <div>Welcome, {user?.name}!</div>;
+}
+```
+
+**Provider Setup** (`app/layout.tsx`):
+```tsx
+<AuthProvider>
+  <UIProvider>
+    <LayoutWrapper>{children}</LayoutWrapper>
+  </UIProvider>
+</AuthProvider>
+```
+
+### Routing with Middleware (Authentication)
+
+Global middleware (`app/middleware.ts`) from PR-5 protects routes:
+- Validates JWT tokens from `Authorization` headers
+- Enforces admin-only route access (403 Forbidden)
+- Attaches user info (`x-user-*` headers) for route handlers
+
+Protected routes in **app/middleware.ts**:
+```typescript
+const PROTECTED_ROUTES = ["/api/reports", "/api/users"];
+const ADMIN_ONLY_ROUTES = ["/api/admin"];
+```
+
+### Layout Features
+
+- **Responsive Design**: Sidebar collapses on mobile, visible on desktop
+- **Dark Mode**: Toggle between light/dark themes via UIContext
+- **Dynamic Navigation**: Links change based on authentication and role
+- **Consistent Styling**: Tailwind CSS for unified look and feel
+
+---
+
 ## Team Branching & PR Workflow
 
 ### Branch Naming Conventions
