@@ -82,6 +82,49 @@ This project supports separate builds for **development**, **staging**, and **pr
 - `.env.production` - Production (minimal logging)
 - `.env.example` - Template (tracked in Git)
 
+### Example `.env.example`
+
+Copy `.env.example` to create your local file (e.g. `.env.local`) and replace placeholders with real values. Server-only variables must NOT be prefixed with `NEXT_PUBLIC_` — only those prefixed that way are exposed to the browser.
+
+```env
+# Server-side (never expose to the browser)
+DATABASE_URL=postgres://username:password@localhost:5432/segregate_db
+JWT_SECRET=replace-with-a-strong-secret
+
+# Client-safe (visible to browser)
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_APP_ENV=development
+NEXT_PUBLIC_ANALYTICS_ID=your-analytics-id
+```
+
+How to use locally:
+
+```bash
+cp .env.example .env.local
+# then edit .env.local with your local credentials
+pnpm install
+pnpm dev
+```
+
+### Safe `process.env` usage (short examples)
+
+- Server-only (do this inside API routes / server components):
+
+```ts
+// server-only example
+const dbUrl = process.env.DATABASE_URL; // OK on server
+if (!dbUrl) throw new Error('Missing DATABASE_URL');
+```
+
+- Client-safe (only use `NEXT_PUBLIC_` prefixed variables in client code):
+
+```ts
+// client example (can be imported in browser code)
+const apiBase = process.env.NEXT_PUBLIC_API_URL;
+```
+
+> ⚠️ Never reference server-only variables from client components/hooks — Next.js will fail the build or leak secrets.
+
 ### Build Commands
 
 ```bash
@@ -145,4 +188,100 @@ JWT_SECRET_PRODUCTION
 ✅ **Secret Safety** - Credentials never appear in git history or logs  
 ✅ **Staged Deployment** - Test in staging before production  
 ✅ **Compliance** - Meets SOC 2, HIPAA, PCI DSS standards
+
+---
+
+## Team Branching & PR Workflow
+
+### Branch Naming Conventions
+
+All branches must follow one of these patterns for consistency and traceability:
+
+- `feature/<feature-name>` — New feature work (e.g., `feature/user-authentication`)
+- `fix/<bug-name>` — Bug fixes (e.g., `fix/navbar-styling`)
+- `chore/<task-name>` — Maintenance, config, dependency updates (e.g., `chore/upgrade-next-js`)
+- `docs/<update-name>` — Documentation updates (e.g., `docs/api-guide`)
+
+**Why:** Consistent naming helps everyone quickly understand branch purpose, improves git history readability, and enables automated tooling.
+
+### Creating & Pushing a Branch
+
+```bash
+# Create and switch to a new branch
+git checkout -b feature/my-feature
+
+# Make your changes
+# ... edit files ...
+
+# Stage and commit
+git add .
+git commit -m "feat: add login page with email/password validation"
+
+# Push to GitHub (sets upstream)
+git push -u origin feature/my-feature
+
+# Go to GitHub and open a Pull Request
+```
+
+### Pull Request Process
+
+1. **Open PR** — Push your branch and create a PR on GitHub
+2. **Auto-checks** — Lint, build, and test workflows run automatically
+3. **Code Review** — At least one teammate reviews using the checklist below
+4. **Address Feedback** — Commit changes, push again (no need to re-open PR)
+5. **Merge** — Once approved and checks pass, merge and delete the branch
+
+**PR Template:** See [.github/pull_request_template.md](.github/pull_request_template.md) for the required format in every PR.
+
+### Code Review Checklist
+
+Every reviewer should verify:
+
+- ✅ **Code Quality**
+  - Code follows naming and folder structure conventions
+  - No TODO comments left unresolved
+  - Comments explain *why*, not just *what*
+  - No hardcoded values (use env vars instead)
+
+- ✅ **Testing & Build**
+  - Code builds: `pnpm build`
+  - Lint passes: `pnpm lint`
+  - No console errors or warnings when testing locally
+  - Changes verified in browser/device if UI-related
+
+- ✅ **Security & Secrets**
+  - No credentials, API keys, or secrets in code
+  - Only `.env.example` committed, never `.env.local`
+  - No sensitive console logs
+
+- ✅ **Documentation**
+  - Meaningful git commit messages
+  - README updated if setup/workflow changed
+  - Complex logic has JSDoc comments
+
+- ✅ **Git Hygiene**
+  - Branch is up to date with `main`
+  - Commit history is clean and logical
+
+### Branch Protection Rules (GitHub Settings)
+
+The `main` branch is protected with these rules (configured in repo settings):
+
+1. ✅ Require pull request reviews before merging
+2. ✅ Require at least 1 approval
+3. ✅ Require status checks to pass (build, lint, test)
+4. ✅ Require branches to be up to date before merging
+
+> **How to view/modify:** Go to **Settings → Branches → Branch protection rules → main**
+
+### Why This Workflow Works
+
+- **Quality** — Code reviews catch issues before they reach production
+- **Traceability** — Clear branch names and PR descriptions make history searchable
+- **Team Knowledge** — Reviews spread expertise and reduce silos
+- **Safety** — Protected `main` means all changes are vetted
+- **Velocity** — Clear process removes ambiguity; no "what should I do?" delays
+- **Trust** — Everyone follows the same rules; fairness and consistency build team momentum
+
+This workflow mirrors real-world teams at startups and large companies — learning it now sets you up for professional work.
 
