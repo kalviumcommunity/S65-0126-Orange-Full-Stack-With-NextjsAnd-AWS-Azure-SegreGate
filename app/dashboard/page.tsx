@@ -1,47 +1,61 @@
-export const dynamic = "force-dynamic" // SSR
+"use client";
+import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 
-async function getServerTime() {
-    try {
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 5000)
-        
-        const res = await fetch("https://worldtimeapi.org/api/timezone/Asia/Kolkata", {
-            cache: "no-store",
-            signal: controller.signal,
-        })
-        
-        clearTimeout(timeoutId)
-        
-        if (!res.ok) {
-            throw new Error(`API responded with status ${res.status}`)
-        }
-        
-        return await res.json()
-    } catch (error) {
-        console.error("Failed to fetch server time:", error)
-        // Return fallback data
-        return {
-            datetime: new Date().toISOString(),
-            timezone: "Asia/Kolkata",
-            error: "Failed to fetch from API"
-        }
-    }
-}
+export default function DashboardPage() {
+  const { isAuthenticated, user } = useAuth();
 
-export default async function DashboardPage() {
-    const data = await getServerTime()
-
-    console.log("Dashboard rendered at REQUEST time")
-
+  if (!isAuthenticated || !user) {
     return (
-        <main className="p-10">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="mt-4 text-gray-600">
-            This page is rendered on every request (SSR).
+      <div className="text-center py-12">
+        <p className="text-gray-600 dark:text-gray-300 mb-4">
+          Please log in to access the dashboard.
         </p>
-        <p className="mt-2 text-sm text-gray-500">
-            Current Server Time: {data.datetime}
+        <Link href="/login" className="text-blue-600 hover:underline">
+          Go to Login
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="py-12 px-6">
+      <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <h2 className="text-xl font-semibold mb-2">My Reports</h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            View and manage your waste segregation reports.
+          </p>
+          <Link
+            href="/reports"
+            className="text-blue-600 hover:underline font-medium"
+          >
+            Go to Reports →
+          </Link>
+        </div>
+
+        <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <h2 className="text-xl font-semibold mb-2">Users</h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            View all users and their roles.
+          </p>
+          <Link
+            href="/users/1"
+            className="text-blue-600 hover:underline font-medium"
+          >
+            View Users →
+          </Link>
+        </div>
+      </div>
+
+      <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg">
+        <h2 className="text-xl font-semibold mb-2">Your Role</h2>
+        <p className="text-gray-600 dark:text-gray-300">
+          Current role: <strong>{user.role}</strong>
         </p>
-        </main>
-    )
+      </div>
+    </div>
+  );
 }
