@@ -316,6 +316,384 @@ docker-compose logs app
 
 ---
 
+## PostgreSQL Schema Design (Prisma ORM)
+
+### Database Architecture
+
+The SegreGate application uses PostgreSQL with Prisma ORM to manage normalized, scalable database operations. The schema is designed around four core entities:
+
+**Core Models:**
+
+```prisma
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+
+  projects  Project[]
+  reports   Report[]
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  ownerId     Int
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  tasks       Task[]
+}
+
+model Task {
+  id        Int      @id @default(autoincrement())
+  title     String
+  status    String   @default("todo")
+  projectId Int
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model Report {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  photoUrl   String?
+  location   String?
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}
+```
+
+### Schema Design Principles
+
+**Normalization (3NF Compliance):**
+- No data duplication: User data is stored once, referenced via foreign keys
+- Atomic attributes: Each column stores a single value (no comma-separated lists)
+- No transitive dependencies: `Task` depends directly on `Project`, not on `User`
+
+**Key Constraints:**
+- **Primary Keys**: Auto-incrementing integers (`@id @default(autoincrement())`)
+- **Foreign Keys**: Relations with `@relation()` and `fields: [ownerId], references: [id]`
+- **Unique Constraints**: `email` is unique to prevent duplicate registrations
+- **Cascading Deletes**: `onDelete: Cascade` ensures orphaned records are cleaned up
+
+**Performance Indexes:**
+- `@@index([projectId])` on Task speeds up queries filtering by project
+- `@@index([userId])` on Report speeds up lookups by user
+
+### Scalability & Query Patterns
+
+**Why This Design Scales:**
+- Normalized structure minimizes data redundancy (smaller database size)
+- Indexes on foreign keys enable fast joins
+- Clear relationships are easy to query and maintain
+
+**Common Query Patterns:**
+- Get all projects for a user → indexed join on `User.id = Project.ownerId`
+- Get all tasks in a project → indexed join on `Project.id = Task.projectId`
+- Get all reports by a user → indexed join on `User.id = Report.userId`
+
+---
+
+## Prisma ORM Setup & Client Initialisation
+
+### Installation & Configuration
+
+Prisma is installed as a dev dependency alongside `@prisma/client` (production):
+
+```bash
+pnpm install -D prisma @prisma/client ts-node
+```
+
+The schema file is located at `prisma/schema.prisma` and defines all models, relationships, and database configuration:
+
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+```
+
+### Prisma Client Singleton
+
+To avoid multiple Prisma client instances in development (which can cause hot-reload issues), we use a singleton pattern in `src/lib/prisma.ts`:
+
+```typescript
+import { PrismaClient } from '@prisma/client';
+
+declare global {
+  var prisma: PrismaClient | undefined;
+}
+
+export const prisma: PrismaClient = global.prisma || new PrismaClient({
+  log: ['query', 'info', 'warn', 'error'],
+});
+
+if (process.env.NODE_ENV !== 'production') global.prisma = prisma;
+```
+
+**Import in API routes or server components:**
+
+```ts
+import { prisma } from '@/lib/prisma';
+
+export async function GET(req: Request) {
+  const users = await prisma.user.findMany();
+  return Response.json(users);
+}
+```
+
+### Client Generation
+
+Generate the Prisma client after schema changes:
+
+```bash
+pnpm exec prisma generate
+```
+
+This creates type-safe queries based on your schema — IDE autocomplete catches errors at development time.
+
+---
+
+## Database Migrations & Seed Scripts
+
+### Running Migrations
+
+Migrations apply schema changes to your PostgreSQL database:
+
+```bash
+# Create and apply a migration
+pnpm exec prisma migrate dev --name init_schema
+
+# View all migrations
+ls prisma/migrations/
+
+# Rollback to a previous migration (development only)
+pnpm exec prisma migrate reset
+```
+
+**Migration Workflow:**
+1. Edit `prisma/schema.prisma` (add/modify models)
+2. Run `prisma migrate dev --name <description>` (auto-generates SQL migration files)
+3. Review generated SQL in `prisma/migrations/<timestamp>_<name>/migration.sql`
+4. Apply to database (Prisma updates `.env` and runs migration)
+
+### Seeding Your Database
+
+The `prisma/seed.ts` script inserts initial sample data:
+
+```typescript
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('Seeding database...');
+
+  await prisma.user.createMany({
+    data: [
+      { name: 'Alice', email: 'alice@example.com', role: 'admin' },
+      { name: 'Bob', email: 'bob@example.com', role: 'user' },
+    ],
+    skipDuplicates: true,
+  });
+
+  // ... create projects, tasks, reports ...
+
+  console.log('Seeding complete');
+}
+
+main()
+  .then(async () => await prisma.$disconnect())
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });
+```
+
+Run the seed script:
+
+```bash
+pnpm exec prisma db seed
+```
+
+**Seed Script Benefits:**
+- **Idempotency**: Uses `skipDuplicates: true` to prevent duplicate inserts when re-seeding
+- **Reproducibility**: All team members get identical test data
+- **Documentation**: Seed file acts as example of each model's structure
+
+### Resetting the Database (Development Only)
+
+```bash
+# Reset database, re-run all migrations, and seed
+pnpm exec prisma migrate reset
+```
+
+⚠️ **Warning:** This deletes all data. Use only in development.
+
+### Production Migrations
+
+For production, store secrets in GitHub Actions and run:
+
+```bash
+pnpm exec prisma migrate deploy
+```
+
+This applies pending migrations without prompting for new migration creation.
+
+---
+
+## Transactions & Query Optimisation
+
+### Database Transactions
+
+Transactions ensure atomicity: multiple operations either all succeed or all fail. Example: creating a report and updating statistics in one atomic operation.
+
+**Using Prisma Transactions:**
+
+```typescript
+import { prisma } from '@/lib/prisma';
+
+export async function submitReportWithStats(userId: number, location: string) {
+  try {
+    const [report, stats] = await prisma.$transaction([
+      // Operation 1: Create the report
+      prisma.report.create({
+        data: {
+          userId,
+          location,
+          status: 'pending',
+        },
+      }),
+      
+      // Operation 2: Update user's report count
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          reportCount: { increment: 1 },
+        },
+      }),
+    ]);
+
+    console.log('Transaction successful:', report, stats);
+    return { report, stats };
+  } catch (error) {
+    console.error('Transaction failed. Rolling back.', error);
+    throw error;
+  }
+}
+```
+
+**Transaction Guarantees:**
+- If either operation fails, both are rolled back (no partial writes)
+- Database consistency is maintained even under concurrent load
+- Perfect for operations with dependencies
+
+### Query Optimisation
+
+**1. Avoid Over-fetching (select fields you need):**
+
+```typescript
+// ❌ Inefficient: fetches all user data
+const users = await prisma.user.findMany();
+
+// ✅ Optimized: fetch only needed fields
+const users = await prisma.user.findMany({
+  select: { id: true, name: true, email: true },
+});
+```
+
+**2. Batch Operations (insert/update multiple records):**
+
+```typescript
+// ✅ Efficient: single query
+await prisma.report.createMany({
+  data: [
+    { userId: 1, location: 'Zone A' },
+    { userId: 2, location: 'Zone B' },
+    { userId: 3, location: 'Zone C' },
+  ],
+});
+```
+
+**3. Pagination (avoid fetching entire tables):**
+
+```typescript
+// ✅ Efficient: limit + offset
+const reports = await prisma.report.findMany({
+  skip: 0,
+  take: 10,
+  orderBy: { createdAt: 'desc' },
+});
+```
+
+**4. Use Indexes for Frequently Queried Columns:**
+
+Already applied in schema:
+```prisma
+model Report {
+  @@index([userId])  // Fast lookup by user
+  @@index([status])  // Fast filtering by status
+}
+```
+
+### Monitoring & Debugging
+
+**Enable Query Logging:**
+
+```bash
+DEBUG="prisma:query" pnpm dev
+```
+
+This logs all SQL queries to console — identify slow queries and optimize with indexes.
+
+**Prisma Studio (GUI Inspector):**
+
+```bash
+pnpm exec prisma studio
+```
+
+Opens a web UI to browse, create, update, and delete records.
+
+### Anti-patterns Avoided
+
+- ❌ **N+1 Queries**: Avoided by using `select` and pre-fetching related data
+- ❌ **Full Table Scans**: Avoided by adding indexes on `userId`, `status`, `projectId`
+- ❌ **Missing Constraints**: Enforced with `@unique`, `onDelete: Cascade`
+- ❌ **Concurrent Update Conflicts**: Mitigated with transactions
+
+### Production Reflection
+
+**Monitoring & Logging:**
+- Track query execution time with `DEBUG="prisma:query"`
+- Use RDS Performance Insights (AWS) or Query Performance Insights (Azure) to identify bottlenecks
+- Set up alerts for slow queries (> 1s)
+- Monitor database connection pool usage
+
+**Backup & Recovery:**
+- Enable automated PostgreSQL backups (AWS RDS, Azure Database for PostgreSQL)
+- Test restore procedures quarterly
+- Keep transaction logs for point-in-time recovery
+
+**Scaling Strategies:**
+- Add read replicas for read-heavy workloads
+- Use Redis caching layer for frequently accessed data (user sessions, report counts)
+- Partition large tables (e.g., reports by date range) as data grows
+
+---
+
 ## Team Branching & PR Workflow
 
 ### Branch Naming Conventions
