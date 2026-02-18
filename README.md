@@ -694,6 +694,186 @@ Opens a web UI to browse, create, update, and delete records.
 
 ---
 
+## Core Backend API Foundation
+
+### API Route Structure
+
+All API endpoints are organized under `app/api/` using Next.js file-based routing:
+
+```
+app/api/
+ ├── reports/
+ │   ├── route.ts          # GET all, POST create
+ │   └── [id]/route.ts     # GET by id, PUT update
+ └── users/
+     ├── route.ts          # GET all, POST create
+     └── [id]/route.ts     # GET by id
+```
+
+**Naming Conventions:**
+- Use plural resource names: `/api/reports`, not `/api/report`
+- Use nouns (resources), not verbs: `/api/reports`, not `/api/getReports`
+- HTTP verbs (GET, POST, PUT) define the action
+
+| HTTP Verb | Route | Purpose |
+|-----------|-------|---------|
+| GET | `/api/reports` | Fetch all reports (paginated) |
+| POST | `/api/reports` | Create new report |
+| GET | `/api/reports/:id` | Fetch report by ID |
+| PUT | `/api/reports/:id` | Update report status/location |
+| GET | `/api/users` | Fetch all users (paginated) |
+| POST | `/api/users` | Create new user |
+| GET | `/api/users/:id` | Fetch user by ID |
+
+### Unified Response Format
+
+Every API endpoint returns a consistent JSON structure for success and error responses:
+
+**Success Response (200, 201):**
+```json
+{
+  "success": true,
+  "message": "Reports fetched successfully",
+  "data": [
+    { "id": 1, "userId": 2, "location": "Zone A", "status": "pending", "createdAt": "2025-10-30T10:00:00Z" }
+  ],
+  "timestamp": "2025-10-30T10:00:00Z"
+}
+```
+
+**Error Response (400, 404, 500):**
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "details": [
+      { "field": "location", "message": "Location must be at least 3 characters" }
+    ]
+  },
+  "timestamp": "2025-10-30T10:00:00Z"
+}
+```
+
+**Response Handler Implementation:**
+- Centralized in `src/lib/responseHandler.ts`
+- All routes use `sendSuccess()` and `sendError()` for consistency
+- Ensures DX improvements: predictable shape, easy error handling
+
+### Input Validation with Zod
+
+API endpoints validate all POST/PUT request bodies using Zod schemas:
+
+**User Schema:**
+```typescript
+const userCreateSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').max(255),
+  email: z.string().email('Invalid email address'),
+  role: z.enum(['user', 'volunteer', 'admin']).default('user'),
+});
+```
+
+**Report Schema:**
+```typescript
+const reportCreateSchema = z.object({
+  userId: z.number().int().positive('User ID must be a positive integer'),
+  location: z.string().min(3, 'Location must be at least 3 characters').max(255),
+  photoUrl: z.string().url('Invalid photo URL').optional(),
+  status: z.enum(['pending', 'approved', 'rejected']).default('pending'),
+});
+```
+
+**Validation Flow:**
+1. Request body is parsed
+2. Zod schema validates structure and types
+3. If invalid, return structured error with field-level details
+4. If valid, proceed with business logic
+
+**Example Validation Error:**
+```bash
+curl -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{"name":"A","email":"bademail"}'
+```
+
+Response (400):
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "details": [
+      { "field": "name", "message": "Name must be at least 2 characters" },
+      { "field": "email", "message": "Invalid email address" }
+    ]
+  }
+}
+```
+
+### Error Handling Middleware
+
+Centralized error handling ensures:
+- Consistent error responses across all routes
+- Stack traces exposed in dev, hidden in prod
+- Structured logging for observability
+
+**Development Mode:**
+```json
+{
+  "success": false,
+  "message": "Database connection failed",
+  "stack": "Error: Database connection failed at line 45..."
+}
+```
+
+**Production Mode:**
+```json
+{
+  "success": false,
+  "message": "Something went wrong. Please try again later."
+}
+```
+
+Detailed errors are logged server-side for debugging without exposing to clients.
+
+### Example API Usage
+
+**Create a Report:**
+```bash
+curl -X POST http://localhost:3000/api/reports \
+  -H "Content-Type: application/json" \
+  -d '{"userId": 1, "location": "Zone A", "photoUrl": "https://example.com/photo.jpg"}'
+```
+
+**Get All Reports (Paginated):**
+```bash
+curl "http://localhost:3000/api/reports?page=1&limit=10"
+```
+
+**Update Report Status:**
+```bash
+curl -X PUT http://localhost:3000/api/reports/1 \
+  -H "Content-Type: application/json" \
+  -d '{"status": "approved"}'
+```
+
+**Get User by ID:**
+```bash
+curl "http://localhost:3000/api/users/1"
+```
+
+### Why Consistency Matters
+
+✅ **Reduced Integration Errors** — Frontend knows what every response looks like  
+✅ **Faster Onboarding** — New team members understand the API instantly  
+✅ **Reliable Error Handling** — Structured errors enable graceful degradation  
+✅ **Production-Ready** — Security (hidden stack traces) + observability (logs) built-in  
+✅ **Maintainability** — Adding new endpoints is predictable and scalable
+
+---
+
 ## Team Branching & PR Workflow
 
 ### Branch Naming Conventions
