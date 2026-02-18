@@ -191,6 +191,131 @@ JWT_SECRET_PRODUCTION
 
 ---
 
+## Docker & Containerized Local Development
+
+This project uses Docker and Docker Compose to containerize the entire application stack — Next.js app, PostgreSQL database, and Redis cache. This ensures a consistent development environment across all machines and eliminates "it works on my machine" issues.
+
+### Prerequisites
+
+- Docker and Docker Compose installed
+  - Windows/Mac: [Docker Desktop](https://www.docker.com/products/docker-desktop)
+  - Linux: [Docker Engine](https://docs.docker.com/engine/install/) + [Docker Compose](https://docs.docker.com/compose/install/)
+
+### Quick Start
+
+```bash
+# Build and start all services
+docker-compose up --build
+
+# In a new terminal, verify all containers are running
+docker ps
+```
+
+The app will be available at `http://localhost:3000`.
+
+### Services Explained
+
+**Dockerfile (Next.js App)**
+- Multi-stage build for optimized image size
+- Stage 1: Builds Next.js app with all dev dependencies
+- Stage 2: Runs only the compiled app with prod dependencies
+- Healthcheck every 10s to ensure app is running
+
+**docker-compose.yml Services:**
+
+| Service | Image | Port | Purpose |
+|---------|-------|------|---------|
+| `app` | Custom (Dockerfile) | 3000 | Next.js frontend/API |
+| `db` | postgres:15-alpine | 5432 | PostgreSQL database |
+| `redis` | redis:7-alpine | 6379 | Redis caching layer |
+
+### Networks & Volumes
+
+- **Network:** All services connect via a custom `localnet` bridge network, allowing them to communicate using service names (e.g., `db:5432` instead of `localhost:5432` inside containers).
+- **Volume:** `db_data` persists PostgreSQL data across container restarts.
+- **Mounts:** App code (`app/`, `public/`) are mounted for hot-reload during development.
+
+### Environment Variables in Docker
+
+The `docker-compose.yml` sets these env vars in the `app` service:
+
+```yaml
+DATABASE_URL: postgres://postgres:postgres@db:5432/segregate_db
+REDIS_URL: redis://redis:6379
+NEXT_PUBLIC_API_URL: http://localhost:3001
+```
+
+Inside the container, these are different from your local `.env.local`:
+- Database hostname is `db` (not `localhost`) — Docker's internal DNS resolves the service name
+- Redis hostname is `redis` (not `localhost`)
+
+For local development *without* Docker, use `localhost` in `.env.local`.
+
+### Common Commands
+
+```bash
+# View logs from all services
+docker-compose logs -f
+
+# View logs from a specific service
+docker-compose logs -f app
+docker-compose logs -f db
+docker-compose logs -f redis
+
+# Stop all services (but keep data)
+docker-compose stop
+
+# Remove all containers and networks (keeps volumes)
+docker-compose down
+
+# Remove everything including volumes (data lost)
+docker-compose down -v
+
+# Rebuild image (if Dockerfile changes)
+docker-compose build
+
+# Run a one-off command in a service
+docker-compose exec app pnpm lint
+docker-compose exec db psql -U postgres -d segregate_db
+```
+
+### Troubleshooting
+
+**Port already in use**
+```bash
+# Find process using port 3000, 5432, or 6379
+lsof -i :3000
+lsof -i :5432
+lsof -i :6379
+
+# Kill the process or change ports in docker-compose.yml
+```
+
+**Database won't connect**
+- Wait a few seconds for PostgreSQL to fully start (healthcheck takes ~5s)
+- Check if `db_data` volume exists: `docker volume ls`
+- Verify `.env.local` uses `localhost`, not `db` (only Docker uses `db`)
+
+**Build fails with "pnpm lock file missing"**
+- Ensure `pnpm-lock.yaml` exists in the repo
+- If missing: `pnpm install` locally first, then commit the lock file
+
+**Container exits immediately**
+```bash
+# Check logs for error messages
+docker-compose logs app
+```
+
+### Why Containerization Matters
+
+✅ **Environment Parity** — Dev, staging, and prod run identical containers  
+✅ **Onboarding** — New team members run `docker-compose up` instead of installing 5+ dependencies  
+✅ **Isolation** — No conflicts with other projects' dependencies  
+✅ **CI/CD Ready** — GitHub Actions and cloud platforms use the same Dockerfile  
+✅ **Scalability** — Easy to add more services (Job workers, etc.) to Compose  
+
+---
+
 ## Team Branching & PR Workflow
 
 ### Branch Naming Conventions
