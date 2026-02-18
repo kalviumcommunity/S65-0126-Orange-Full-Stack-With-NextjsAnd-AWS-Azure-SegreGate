@@ -874,6 +874,296 @@ curl "http://localhost:3000/api/users/1"
 
 ---
 
+## Authentication & Authorization
+
+### JWT Structure & Token Management
+
+SegreGate uses **JSON Web Tokens (JWT)** for stateless, secure authentication. A JWT consists of three parts separated by dots (`.`):
+
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoiYWxpY2VAZXhhbXBsZS5jb20iLCJyb2xlIjoiYWRtaW4ifQ.signature
+     header                                          payload                                           signature
+```
+
+**Decoded Structure:**
+```json
+{
+  "header": { "alg": "HS256", "typ": "JWT" },
+  "payload": { "userId": 1, "email": "alice@example.com", "role": "admin", "exp": 1715120000 },
+  "signature": "hashed-verification-string"
+}
+```
+
+- **Header**: Algorithm (HS256) and token type
+- **Payload**: User info (userId, email, role) + expiry time
+- **Signature**: Ensures token hasn't been tampered with
+
+### Access vs Refresh Tokens
+
+Two tokens are issued on successful login for security and usability:
+
+| Token | Lifespan | Purpose | Storage | Security |
+|-------|----------|---------|---------|----------|
+| **Access Token** | 15 minutes | Make API requests | Response body | Short-lived, exposed to JavaScript |
+| **Refresh Token** | 7 days | Obtain new access token | HTTP-only cookie | Long-lived, protected from XSS |
+
+**Token Flow Diagram:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. User Signup/Login                                        │
+│    POST /api/auth/signup or POST /api/auth/login            │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 2. Server Issues Tokens                                     │
+│    Access Token (15 min) + Refresh Token (7 days)           │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+    ┌──────────────────┴──────────────────┐
+    │                                     │
+    ▼                                     ▼
+┌──────────────────┐          ┌──────────────────────┐
+│ Response Body    │          │ HTTP-Only Cookie     │
+│ accessToken      │          │ refreshToken (secure)│
+└──────────────────┘          └──────────────────────┘
+    │                                     │
+    └──────────────────┬──────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 3. Client Makes API Requests                                │
+│    Authorization: Bearer <accessToken>                      │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+        ┌──────────────┴──────────────┐
+        │                             │
+        ▼                             ▼
+     ✅ Valid                   ⏰ Expired (401)
+        │                             │
+        │                             ▼
+        │                  ┌──────────────────────┐
+        │                  │ 4. Refresh Token     │
+        │                  │ POST /api/auth/refresh│
+        │                  │ (refreshToken cookie)│
+        │                  └──────┬───────────────┘
+        │                         │
+        │                         ▼
+        │                  ┌──────────────────────┐
+        │                  │ New Access Token     │
+        │                  │ (15 min)             │
+        │                  └──────┬───────────────┘
+        │                         │
+        └─────────────────┬───────┘
+                          │
+                          ▼
+                  ✅ Retry Original Request
+```
+
+### Authentication Endpoints
+
+**Signup: Create New User**
+```bash
+curl -X POST http://localhost:3000/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Alice Johnson",
+    "email": "alice@example.com",
+    "password": "SecurePassword123",
+    "role": "user"
+  }'
+```
+
+Response (201):
+```json
+{
+  "success": true,
+  "message": "User registered successfully. Please log in.",
+  "data": {
+    "id": 1,
+    "name": "Alice Johnson",
+    "email": "alice@example.com",
+    "role": "user",
+    "createdAt": "2025-10-30T10:00:00Z"
+  },
+  "timestamp": "2025-10-30T10:00:00Z"
+}
+```
+
+**Login: Authenticate & Get Tokens**
+```bash
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "alice@example.com",
+    "password": "SecurePassword123"
+  }'
+```
+
+Response (200) with HTTP-only cookie:
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": 1,
+      "name": "Alice Johnson",
+      "email": "alice@example.com",
+      "role": "user"
+    }
+  },
+  "timestamp": "2025-10-30T10:00:00Z"
+}
+```
+
+HTTP Header also sets:
+```
+Set-Cookie: refreshToken=<7daytoken>; HttpOnly; Secure; SameSite=Strict; Path=/
+```
+
+**Refresh Token: Get New Access Token**
+```bash
+curl -X POST http://localhost:3000/api/auth/refresh \
+  -H "Cookie: refreshToken=<7daytoken>"
+```
+
+Response (200):
+```json
+{
+  "success": true,
+  "message": "Access token refreshed successfully",
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": 1,
+      "name": "Alice Johnson",
+      "email": "alice@example.com",
+      "role": "user"
+    }
+  },
+  "timestamp": "2025-10-30T10:00:00Z"
+}
+```
+
+### Protected API Routes
+
+All protected routes require a valid access token in the `Authorization` header:
+
+**Access Protected Route:**
+```bash
+curl -X GET http://localhost:3000/api/reports \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+**Missing Token (401):**
+```json
+{
+  "success": false,
+  "message": "Unauthorized: Missing authentication token",
+  "error": { "code": "MISSING_TOKEN" },
+  "timestamp": "2025-10-30T10:00:00Z"
+}
+```
+
+**Invalid/Expired Token (401):**
+```json
+{
+  "success": false,
+  "message": "Unauthorized: Invalid or expired token",
+  "error": { "code": "INVALID_TOKEN" },
+  "timestamp": "2025-10-30T10:00:00Z"
+}
+```
+
+### Role-Based Access Control (RBAC)
+
+Three user roles with different permissions:
+
+| Role | Permissions | Use Case |
+|------|-------------|----------|
+| **user** | Create own reports, view own reports | Household members reporting waste segregation |
+| **volunteer** | Create/verify reports, view local reports | Community volunteers verifying submissions |
+| **admin** | Full access (create, read, update, delete, verify) | Municipal authorities managing system |
+
+**Permission Mapping:**
+
+```typescript
+{
+  admin: [
+    'create_user', 'read_user', 'update_user', 'delete_user',
+    'create_report', 'read_report', 'update_report', 'delete_report',
+    'verify_report', 'view_all_reports', 'access_analytics', 'manage_roles'
+  ],
+  volunteer: [
+    'read_user', 'create_report', 'read_report', 'update_report',
+    'verify_report', 'view_local_reports'
+  ],
+  user: [
+    'read_user', 'create_report', 'read_report', 'update_report', 'view_own_reports'
+  ]
+}
+```
+
+**Middleware Authorization Check:**
+
+Global `app/middleware.ts` validates tokens for all protected routes:
+1. Extract JWT from `Authorization: Bearer <token>` header
+2. Verify token signature and expiry
+3. For admin routes, check if user role is `admin`
+4. Attach user info (`x-user-id`, `x-user-email`, `x-user-role`) to request
+5. Block unauthorized requests with 403 Forbidden
+
+**Admin-Only Route Example:**
+```bash
+# Regular user attempting admin access
+curl -X GET http://localhost:3000/api/admin \
+  -H "Authorization: Bearer <user-token>"
+```
+
+Response (403):
+```json
+{
+  "success": false,
+  "message": "Forbidden: Admin access required",
+  "error": { "code": "ADMIN_ACCESS_REQUIRED" },
+  "timestamp": "2025-10-30T10:00:00Z"
+}
+```
+
+### Security Best Practices
+
+**Token Storage:**
+- ✅ Access tokens → Response body (frontend stores in memory)
+- ✅ Refresh tokens → HTTP-only cookies (protected from XSS)
+- ❌ Never store sensitive tokens in `localStorage` (vulnerable to XSS)
+
+**Password Security:**
+- Passwords hashed with bcrypt (10 salt rounds) before storage
+- Never stored in plain text or returned in API responses
+- Compared using `bcrypt.compare()` to prevent timing attacks
+
+**Token Expiry & Rotation:**
+- Access tokens expire in 15 minutes (minimal exposure window)
+- Refresh tokens expire in 7 days (require re-login for long-term access)
+- Tokens are rotated on each refresh for additional security
+
+**HTTPS & Cookies:**
+- Access tokens sent in request body (can work over HTTP in dev)
+- Refresh tokens use `Secure` flag (HTTPS only in production)
+- `SameSite=Strict` prevents CSRF attacks
+- `HttpOnly` flag prevents JavaScript access (XSS protection)
+
+**Environment Variables:**
+Store these securely (never commit):
+```env
+JWT_SECRET=your-long-random-secret-key-minimum-32-chars
+REFRESH_TOKEN_SECRET=your-long-random-refresh-secret-key
+```
+
+---
+
 ## Team Branching & PR Workflow
 
 ### Branch Naming Conventions
