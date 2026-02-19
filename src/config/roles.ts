@@ -49,7 +49,7 @@ export const PROTECTED_ROUTES = ["/api/reports", "/api/users", "/api/upload", "/
  * Admin-only routes
  * Routes matched with startsWith() logic
  */
-export const ADMIN_ONLY_ROUTES = ["/api/admin"];
+export const ADMIN_ONLY_ROUTES = ["/api/admin", "/api/users"];
 
 /**
  * Check if user has a specific permission based on role
