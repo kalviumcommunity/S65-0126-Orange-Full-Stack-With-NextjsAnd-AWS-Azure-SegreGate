@@ -1623,3 +1623,44 @@ toast.promise(submitReport(), {
 ### 5. Live Demo
 
 Visit `/feedback-demo` to see all feedback elements in action.
+
+---
+
+## Responsive Design & Theme System
+
+I have enhanced the application with a custom design system and responsive layout capabilities using TailwindCSS.
+
+### 1. Tailwind Configuration Summary
+
+**Custom Breakpoints:**
+- `sm`: 640px
+- `md`: 768px
+- `lg`: 1024px
+- `xl`: 1280px
+
+**Theme Tokens (Brand Colors):**
+- **Brand Light**: `#93C5FD` (Blue-300)
+- **Brand Default**: `#3B82F6` (Blue-500)
+- **Brand Dark**: `#1E40AF` (Blue-800)
+
+Configuration is managed in `tailwind.config.js` extending the default theme.
+
+### 2. Responsiveness Evidence
+
+The homepage (`/`) features a **Responsive & Theme Showcase** section at the bottom.
+- **Mobile (`< 640px`)**: Cards stack vertically, text is sized for readability.
+- **Tablet (`md`)**: Layout shifts to a 2-column grid.
+- **Desktop (`lg`)**: Layout expands to a 4-column grid.
+- **Typography**: Heading sizes adapt automatically (e.g., `text-xl` → `text-3xl`).
+
+### 3. Theme Reflection
+
+**Light & Dark Mode Support:**
+- Implemented a toggle switch in the header.
+- Uses `class` strategy with `dark:` variants for all components.
+- Persistent preference stored in `localStorage`.
+
+**Accessibility & Contrast:**
+- **Text**: High contrast text colors (`gray-900` on light, `white` on dark).
+- **Brand Colors**: Chosen to ensure readability. `Brand Default` uses white text, while `Brand Light` uses dark text for optimal contrast.
+- **Borders**: Subtle borders (`gray-200` to `gray-700`) maintain structure in dark mode without being harsh.
