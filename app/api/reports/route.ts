@@ -18,6 +18,8 @@ export async function GET(req: Request) {
         id: true,
         userId: true,
         location: true,
+        description: true,
+        segregationQuality: true,
         status: true,
         createdAt: true,
       },
@@ -49,11 +51,22 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
+    // Get user ID from headers (set by middleware)
+    const userIdHeader = req.headers.get('x-user-id');
+
+    if (!userIdHeader) {
+      return sendError('Unauthorized', 'UNAUTHORIZED', 401);
+    }
+
+    const userId = parseInt(userIdHeader, 10);
+
     // Sanitize input to prevent XSS and injection attacks
     const sanitizedBody = {
       ...body,
+      userId,
       location: sanitizeHtmlInput(body.location || ''),
       description: body.description ? sanitizeHtmlInput(body.description) : undefined,
+      segregationQuality: body.segregationQuality, // Enum, safe
       photoUrl: body.photoUrl ? sanitizeUrl(body.photoUrl) : undefined,
     };
 
@@ -81,6 +94,8 @@ export async function POST(req: Request) {
         id: true,
         userId: true,
         location: true,
+        description: true,
+        segregationQuality: true,
         status: true,
         createdAt: true,
       },
