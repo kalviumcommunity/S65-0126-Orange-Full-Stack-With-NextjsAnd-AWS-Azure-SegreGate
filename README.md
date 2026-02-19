@@ -1434,3 +1434,138 @@ The `main` branch is protected with these rules (configured in repo settings):
 
 This workflow mirrors real-world teams at startups and large companies — learning it now sets you up for professional work.
 
+---
+
+## Security Hardening (PR-10)
+
+### Input Sanitization & OWASP Compliance
+
+**2.36 — Input Sanitization & OWASP Compliance**
+
+SegreGate implements comprehensive input sanitization to prevent XSS, SQL Injection, and other injection attacks.
+
+**Sanitization Library:** `src/lib/sanitize.ts`
+- ✅ `sanitizeHtmlInput()` — Removes HTML tags from text inputs
+- ✅ `sanitizeEmail()` — Validates and normalizes email addresses
+- ✅ `sanitizeUrl()` — Validates URLs and blocks javascript: / data: URLs
+- ✅ `isInputSafe()` — Detects common attack patterns (SQL injection, XSS)
+- ✅ `escapeHtml()` — Safely escapes HTML entities
+
+**Applied To:**
+- `/api/reports` — Sanitizes location, description, photoUrl
+- `/api/users` — Sanitizes name, email
+- All forms use React Hook Form + Zod validation
+
+**OWASP Top 10 Compliance:**
+| Risk | Mitigation |
+|------|-----------|
+| A3: Injection | Parameterized Prisma queries + input sanitization |
+| A7: XSS | HTML sanitization + React auto-escaping |
+| A5: Broken Access | Role-based authorization + JWT validation |
+| A1: Auth Bypass | Secure token management + bcrypt hashing |
+
+**Example Attack Prevention:**
+```typescript
+// User uploads malicious input
+Input: "<script>alert('XSS')</script>"
+
+// After sanitization
+Stored: "alert('XSS')"  // Tags removed, safe to display
+
+// Rendered safely
+Output: <div>alert('XSS')</div>  // No script execution
+```
+
+### HTTPS Enforcement & Secure Headers
+
+**2.37 — HTTPS Enforcement and Secure Headers**
+
+Security headers are configured globally in `src/lib/security-headers.ts` and applied to all responses via `next.config.ts`.
+
+**Security Headers Implemented:**
+
+| Header | Purpose | Value |
+|--------|---------|-------|
+| **HSTS** | Force HTTPS connections | `max-age=63072000; includeSubDomains; preload` |
+| **CSP** | Restrict script sources (prevent XSS) | `default-src 'self'; script-src 'self' ...` |
+| **X-Frame-Options** | Prevent clickjacking | `SAMEORIGIN` |
+| **X-Content-Type-Options** | Prevent MIME sniffing | `nosniff` |
+| **Referrer-Policy** | Control referrer sharing | `strict-origin-when-cross-origin` |
+| **Permissions-Policy** | Disable sensitive APIs | Block geolocation, microphone, camera |
+
+**CORS Security:**
+```typescript
+// Only these origins can access the API
+ALLOWED_ORIGINS = [
+  'https://segregate.example.com',      // Production
+  'https://admin.segregate.example.com',  // Admin
+  'http://localhost:3000',              // Local dev
+]
+```
+
+- ✅ Blocks unauthorized cross-origin requests
+- ✅ Prevents CSRF attacks
+- ✅ Validates origins in middleware
+
+**Verify Headers Locally:**
+```bash
+# Command line
+curl -I http://localhost:3000
+
+# Or use DevTools
+# Network → Click any request → Response Headers
+# Look for: Strict-Transport-Security, Content-Security-Policy, etc.
+```
+
+**Security Scanner:**
+- Run [securityheaders.com](https://securityheaders.com) scan
+- Enter deployment domain
+- Get security score and recommended fixes
+
+### Testing Security Features
+
+**Test XSS Prevention:**
+1. Go to `/reports/new`
+2. Try submitting: `<script>alert('XSS')</script>`
+3. Verify: Input is sanitized, no alert appears
+
+**Test CSRF/CORS:**
+1. Open browser DevTools Console
+2. Try API request from different domain:
+   ```javascript
+   fetch('http://localhost:3000/api/users', {
+     credentials: 'include',
+   })
+   ```
+3. Verify: CORS error in console (expected)
+
+**Test SQL Injection:**
+1. Try submitting: `' OR '1'='1`
+2. Verify: Treated as literal text (Prisma uses parameterized queries)
+
+**Test Security Headers:**
+1. Check DevTools Network tab
+2. Verify headers present on every response
+3. Use securityheaders.com for detailed analysis
+
+### Continuous Security
+
+**Practices:**
+- Never commit secrets or credentials
+- Always sanitize before saving user input
+- Validate and escape output before rendering
+- Keep dependencies updated: `pnpm audit`, `pnpm update`
+- Review logs for suspicious activity
+
+**Future Improvements:**
+- [ ] Add rate limiting middleware
+- [ ] Implement request/response logging
+- [ ] Add OWASP CSP hardening for production
+- [ ] Implement database query audit logs
+- [ ] Add intrusion detection for suspicious patterns
+
+---
+
+**For detailed security implementation:**
+See [SECURITY.md](./SECURITY.md) — Complete guide with examples, testing, and recommendations.
+

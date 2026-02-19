@@ -4,6 +4,7 @@ import { prisma } from '@/src/lib/prisma';
 import { userCreateSchema } from '@/src/lib/schemas/userSchema';
 import { sendSuccess, sendError } from '@/src/lib/responseHandler';
 import { handleError } from '@/src/lib/errorHandler';
+import { sanitizeHtmlInput, sanitizeEmail, isInputSafe } from '@/src/lib/sanitize';
 
 export async function GET(req: Request) {
   try {
@@ -52,8 +53,20 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // Validate input with Zod
-    const validatedData = userCreateSchema.parse(body);
+    // Sanitize input to prevent XSS and injection attacks
+    const sanitizedBody = {
+      ...body,
+      name: sanitizeHtmlInput(body.name || ''),
+      email: sanitizeEmail(body.email || ''),
+    };
+
+    // Additional safety validation
+    if (!isInputSafe(body.name)) {
+      return sendError('Input contains potentially malicious content', 'UNSAFE_INPUT', 400);
+    }
+
+    // Validate sanitized input with Zod
+    const validatedData = userCreateSchema.parse(sanitizedBody);
 
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
@@ -64,7 +77,7 @@ export async function POST(req: Request) {
       return sendError('Email already in use', 'EMAIL_EXISTS', 400);
     }
 
-    // Create user
+    // Create user with sanitized data
     const user = await prisma.user.create({
       data: validatedData,
       select: {
