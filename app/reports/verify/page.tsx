@@ -6,9 +6,18 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAuthenticatedSWR } from '@/hooks/useAuthenticatedSWR';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge, getStatusVariant, getQualityVariant } from '@/components/ui/StatusBadge';
-import { EmptyState } from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
-import { ClipboardCheck, CheckCircle, XCircle } from 'lucide-react';
+import { 
+  ClipboardCheck, 
+  CheckCircle, 
+  XCircle, 
+  MapPin, 
+  Calendar, 
+  User as UserIcon,
+  Image as ImageIcon,
+  Shield,
+  AlertCircle
+} from 'lucide-react';
 
 interface Report {
   id: number;
@@ -72,11 +81,13 @@ export default function VerifyReportsPage() {
 
   if (authLoading) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Verify Reports</h1>
-        <div className="animate-pulse space-y-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-24 rounded-lg bg-gray-200 dark:bg-gray-800" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-8 w-40 animate-pulse rounded bg-gray-200 dark:bg-gray-800" />
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-64 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-800" />
           ))}
         </div>
       </div>
@@ -85,131 +96,176 @@ export default function VerifyReportsPage() {
 
   if (!user || (user.role !== 'volunteer' && user.role !== 'admin')) {
     return (
-      <div className="py-12 text-center">
-        <p className="text-gray-500 dark:text-gray-400">
+      <Card className="py-16 text-center">
+        <Shield className="mx-auto h-12 w-12 text-gray-400" />
+        <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
+          Access Restricted
+        </h3>
+        <p className="mt-2 text-gray-500 dark:text-gray-400">
           You need volunteer or admin access to verify reports.
         </p>
-      </div>
+      </Card>
     );
   }
 
-  const allReports = data?.data?.reports ?? [];
-  // Reports are already filtered by status=pending on the server side
-  const pendingReports = allReports;
+  const pendingReports = data?.data?.reports ?? [];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Verify Reports</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          {pendingReports.length} pending report{pendingReports.length !== 1 ? 's' : ''} to review
-        </p>
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Verify Reports</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Review and approve community submissions
+          </p>
+        </div>
+        {pendingReports.length > 0 && (
+          <div className="flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+            <AlertCircle className="h-4 w-4" />
+            {pendingReports.length} pending
+          </div>
+        )}
       </div>
 
+      {/* Error */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-          Failed to load reports.
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+          <p className="text-sm font-medium text-red-700 dark:text-red-400">
+            Failed to load reports. Please try again.
+          </p>
         </div>
       )}
 
+      {/* Loading */}
       {isLoading && !data && (
-        <div className="animate-pulse space-y-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-24 rounded-lg bg-gray-200 dark:bg-gray-800" />
+        <div className="grid gap-4 lg:grid-cols-2">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-64 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-800" />
           ))}
         </div>
       )}
 
+      {/* Empty state */}
       {!isLoading && pendingReports.length === 0 && (
-        <EmptyState
-          icon={<ClipboardCheck className="h-10 w-10" />}
-          title="All caught up"
-          description="There are no pending reports to verify right now."
-        />
+        <Card className="py-16 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
+            <CheckCircle className="h-8 w-8 text-green-600" />
+          </div>
+          <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
+            All caught up!
+          </h3>
+          <p className="mt-2 text-gray-500 dark:text-gray-400">
+            There are no pending reports to verify right now.
+          </p>
+        </Card>
       )}
 
-      <div className="space-y-3">
-        {pendingReports.map((report) => (
-          <Card key={report.id}>
-            <div className="flex flex-col gap-4 p-5">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      Report #{report.id}
-                    </span>
-                    <StatusBadge variant={getStatusVariant(report.status)}>
-                      {report.status}
-                    </StatusBadge>
-                    {report.segregationQuality && (
-                      <StatusBadge variant={getQualityVariant(report.segregationQuality)}>
-                        {report.segregationQuality}
-                      </StatusBadge>
-                    )}
-                  </div>
-                  {report.user && (
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                      Submitted by: {report.user.name} ({report.user.email})
-                    </p>
-                  )}
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {report.location || 'No location'} &middot;{' '}
-                    {new Date(report.createdAt).toLocaleDateString()}
-                  </p>
-                  {report.description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      {report.description}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex shrink-0 gap-2">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => handleVerify(report.id, 'approved')}
-                    disabled={updatingId === report.id}
-                    loading={updatingId === report.id}
-                  >
-                    <CheckCircle className="mr-1 h-4 w-4" />
-                    Approve
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => handleVerify(report.id, 'rejected')}
-                    disabled={updatingId === report.id}
-                  >
-                    <XCircle className="mr-1 h-4 w-4" />
-                    Reject
-                  </Button>
-                </div>
-              </div>
-
-              {/* Photo evidence */}
-              {report.photoUrl && (
-                <div className="mt-2">
-                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-                    Photo Evidence:
-                  </p>
+      {/* Reports Grid */}
+      {pendingReports.length > 0 && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {pendingReports.map((report) => (
+            <Card key={report.id} padding="none" className="overflow-hidden">
+              <div className="flex flex-col h-full">
+                {/* Photo */}
+                {report.photoUrl ? (
                   <a
                     href={report.photoUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block"
+                    className="relative block h-48 w-full overflow-hidden bg-gray-100 dark:bg-gray-800"
                   >
                     <img
                       src={report.photoUrl}
                       alt={`Report #${report.id} evidence`}
-                      className="h-48 w-auto rounded-lg border border-gray-200 object-cover transition-transform hover:scale-105 dark:border-gray-700"
+                      className="h-full w-full object-cover transition-transform hover:scale-105"
                     />
+                    <div className="absolute bottom-2 left-2 rounded-full bg-black/50 px-2 py-1 text-xs text-white backdrop-blur">
+                      Click to enlarge
+                    </div>
                   </a>
+                ) : (
+                  <div className="flex h-48 w-full items-center justify-center bg-gray-100 dark:bg-gray-800">
+                    <ImageIcon className="h-12 w-12 text-gray-400" />
+                  </div>
+                )}
+
+                {/* Content */}
+                <div className="flex flex-1 flex-col p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-gray-900 dark:text-white">
+                          Report #{report.id}
+                        </h3>
+                        {report.segregationQuality && (
+                          <StatusBadge variant={getQualityVariant(report.segregationQuality)} size="sm">
+                            {report.segregationQuality}
+                          </StatusBadge>
+                        )}
+                      </div>
+                    </div>
+                    <StatusBadge variant={getStatusVariant(report.status)}>
+                      {report.status}
+                    </StatusBadge>
+                  </div>
+
+                  {/* Meta */}
+                  <div className="mt-3 space-y-2 text-sm">
+                    {report.user && (
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                        <UserIcon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{report.user.name} ({report.user.email})</span>
+                      </div>
+                    )}
+                    {report.location && (
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                        <MapPin className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{report.location}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-500">
+                      <Calendar className="h-4 w-4 shrink-0" />
+                      <span>{new Date(report.createdAt).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {report.description && (
+                    <p className="mt-3 text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                      {report.description}
+                    </p>
+                  )}
+
+                  {/* Actions */}
+                  <div className="mt-auto flex gap-2 pt-4">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleVerify(report.id, 'approved')}
+                      disabled={updatingId === report.id}
+                      loading={updatingId === report.id}
+                    >
+                      <CheckCircle className="mr-1.5 h-4 w-4" />
+                      Approve
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleVerify(report.id, 'rejected')}
+                      disabled={updatingId === report.id}
+                    >
+                      <XCircle className="mr-1.5 h-4 w-4" />
+                      Reject
+                    </Button>
+                  </div>
                 </div>
-              )}
-            </div>
-          </Card>
-        ))}
-      </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
