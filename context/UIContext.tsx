@@ -1,38 +1,65 @@
-"use client";
-import { createContext, useContext, useState, ReactNode, useCallback } from "react";
+'use client';
 
-interface UIContextType {
-  theme: "light" | "dark";
-  toggleTheme: () => void;
+import {
+  createContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from 'react';
+
+/** UIContext value type */
+export interface UIContextType {
+  theme: 'light' | 'dark';
   sidebarOpen: boolean;
+  toggleTheme: () => void;
   toggleSidebar: () => void;
+  closeSidebar: () => void;
 }
 
-const UIContext = createContext<UIContextType | undefined>(undefined);
+export const UIContext = createContext<UIContextType | undefined>(undefined);
 
 export function UIProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Initialise theme from localStorage / system preference (SSR-safe)
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'light';
+    const stored = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    return (
+      stored ??
+      (window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light')
+    );
+  });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Sync the dark class on <html> whenever theme changes (external DOM sync)
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
 
   const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+    setTheme((prev) => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      localStorage.setItem('theme', next);
+      document.documentElement.classList.toggle('dark', next === 'dark');
+      return next;
+    });
   }, []);
 
   const toggleSidebar = useCallback(() => {
     setSidebarOpen((prev) => !prev);
   }, []);
 
+  const closeSidebar = useCallback(() => {
+    setSidebarOpen(false);
+  }, []);
+
   return (
-    <UIContext.Provider value={{ theme, toggleTheme, sidebarOpen, toggleSidebar }}>
+    <UIContext.Provider
+      value={{ theme, sidebarOpen, toggleTheme, toggleSidebar, closeSidebar }}
+    >
       {children}
     </UIContext.Provider>
   );
-}
-
-export function useUIContext() {
-  const context = useContext(UIContext);
-  if (!context) {
-    throw new Error("useUIContext must be used within UIProvider");
-  }
-  return context;
 }

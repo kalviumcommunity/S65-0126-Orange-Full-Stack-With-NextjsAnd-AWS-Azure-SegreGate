@@ -1,69 +1,91 @@
-"use client";
-import Link from "next/link";
-import { useAuth } from "@/hooks/useAuth";
-import { useUI } from "@/hooks/useUI";
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { useUI } from '@/hooks/useUI';
+
+interface NavItem {
+  label: string;
+  href: string;
+  /** If set, only users with one of these roles see this link */
+  roles?: string[];
+}
+
+/**
+ * Sidebar navigation items.
+ * `roles` restricts visibility; omit for links visible to all authenticated users.
+ */
+const NAV_ITEMS: NavItem[] = [
+  { label: 'Dashboard', href: '/dashboard' },
+  {
+    label: 'Submit Report',
+    href: '/reports/new',
+    roles: ['user', 'volunteer', 'admin'],
+  },
+  {
+    label: 'My Reports',
+    href: '/reports',
+    roles: ['user', 'volunteer', 'admin'],
+  },
+  {
+    label: 'Verify Reports',
+    href: '/reports/verify',
+    roles: ['volunteer', 'admin'],
+  },
+  { label: 'All Users', href: '/users', roles: ['admin'] },
+];
 
 export default function Sidebar() {
-  const { isAuthenticated, user } = useAuth();
-  const { sidebarOpen } = useUI();
+  const { user } = useAuth();
+  const { sidebarOpen, closeSidebar } = useUI();
+  const pathname = usePathname();
 
-  const publicLinks = [{ label: "Home", href: "/" }];
-
-  const authenticatedLinks = [
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "Reports", href: "/reports" },
-    { label: "Profile", href: "/users/1" },
-  ];
-
-  const adminLinks = [{ label: "Admin Panel", href: "/admin" }];
+  // Filter nav items based on the current user's role
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (!item.roles) return true;
+    return user && item.roles.includes(user.role);
+  });
 
   return (
-    <aside
-      className={`fixed left-0 top-16 h-screen w-64 bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-transform duration-300 ${
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      } lg:translate-x-0 lg:static z-30`}
-    >
-      <nav className="p-6 space-y-4">
-        {publicLinks.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-          >
-            {link.label}
-          </Link>
-        ))}
+    <>
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={closeSidebar}
+        />
+      )}
 
-        {isAuthenticated && (
-          <>
-            <hr className="dark:border-gray-700" />
-            {authenticatedLinks.map((link) => (
+      {/* Sidebar panel */}
+      <aside
+        className={`fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] w-64 transform border-r border-gray-200 bg-white transition-transform duration-200 dark:border-gray-700 dark:bg-gray-900 lg:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <nav className="flex flex-col gap-1 p-4">
+          {visibleItems.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (item.href !== '/dashboard' && pathname.startsWith(item.href));
+
+            return (
               <Link
-                key={link.href}
-                href={link.href}
-                className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                key={item.href}
+                href={item.href}
+                onClick={closeSidebar}
+                className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+                }`}
               >
-                {link.label}
+                {item.label}
               </Link>
-            ))}
-
-            {user?.role === "admin" && (
-              <>
-                <hr className="dark:border-gray-700" />
-                {adminLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </>
-            )}
-          </>
-        )}
-      </nav>
-    </aside>
+            );
+          })}
+        </nav>
+      </aside>
+    </>
   );
 }

@@ -1,8 +1,12 @@
-"use client";
-import Link from "next/link";
-import { useEffect, useState } from "react";
+'use client';
 
-interface User {
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import Button from '@/components/ui/Button';
+import Link from 'next/link';
+
+interface UserProfile {
   id: number;
   name: string;
   email: string;
@@ -10,41 +14,97 @@ interface User {
   createdAt: string;
 }
 
-export default function UserProfilePage({ params }: { params: { id: string } }) {
-  const [user, setUser] = useState<User | null>(null);
+export default function UserProfilePage() {
+  const params = useParams();
+  const { accessToken } = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!params.id || !accessToken) return;
+
     const fetchUser = async () => {
       try {
-        const token = localStorage.getItem("accessToken");
-        const response = await fetch(`/api/users/${params.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
+        const res = await fetch(`/api/users/${params.id}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
+        const data = await res.json();
 
-        if (!response.ok) {
-          setError("User not found");
-          setLoading(false);
-          return;
+        if (data.success) {
+          setProfile(data.data);
+        } else {
+          setError(data.message || 'User not found');
         }
-
-        const data = await response.json();
-        setUser(data.data);
-      } catch (err) {
-        setError("Failed to fetch user");
+      } catch {
+        setError('Failed to load user profile');
       } finally {
         setLoading(false);
       }
     };
 
     fetchUser();
-  }, [params.id]);
+  }, [params.id, accessToken]);
 
-  if (loading) return <p className="text-center py-12\">Loading...</p>;
-  if (error) return <p className=\"text-center py-12 text-red-600\">{error}</p>;
-  if (!user) return null;
+  /* ── Loading state ──────────────────────────────────────────────── */
+  if (loading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
+      </div>
+    );
+  }
 
+  /* ── Error state ────────────────────────────────────────────────── */
+  if (error) {
+    return (
+      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4">
+        <p className="text-red-600 dark:text-red-400">{error}</p>
+        <Link href="/dashboard">
+          <Button variant="secondary">Back to Dashboard</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  if (!profile) return null;
+
+  /* ── Profile view ───────────────────────────────────────────────── */
   return (
-    <div className=\"py-12 px-6\">
-      <Link href=\"/dashboard\" className=\"text-blue-600 hover:underline mb-6 inline-block\">\n        ← Back to Dashboard\n      </Link>\n\n      <div className=\"max-w-2xl p-6 border border-gray-200 dark:border-gray-700 rounded-lg\">\n        <h1 className=\"text-3xl font-bold mb-4\">{user.name}</h1>\n        <div className=\"space-y-3\">\n          <p><span className=\"font-semibold\">Email:</span> {user.email}</p>\n          <p><span className=\"font-semibold\">Role:</span> {user.role}</p>\n          <p><span className=\"font-semibold\">Member Since:</span> {new Date(user.createdAt).toLocaleDateString()}</p>\n        </div>\n      </div>\n    </div>\n  );\n}\n
+    <div className="mx-auto max-w-2xl">
+      <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex items-center gap-4">
+          {/* Avatar placeholder */}
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-2xl font-bold text-green-600 dark:bg-green-900/30 dark:text-green-400">
+            {profile.name.charAt(0).toUpperCase()}
+          </div>
+
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {profile.name}
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400">{profile.email}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Role</p>
+            <p className="mt-1 font-semibold capitalize text-gray-900 dark:text-white">
+              {profile.role}
+            </p>
+          </div>
+
+          <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Member Since
+            </p>
+            <p className="mt-1 font-semibold text-gray-900 dark:text-white">
+              {new Date(profile.createdAt).toLocaleDateString()}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

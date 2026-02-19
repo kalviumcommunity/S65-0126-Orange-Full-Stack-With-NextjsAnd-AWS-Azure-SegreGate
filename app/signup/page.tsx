@@ -5,14 +5,15 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import Button from '@/components/ui/Button';
 
-export default function LoginPage() {
-  const { login, isAuthenticated } = useAuth();
+export default function SignupPage() {
+  const { signup, isAuthenticated } = useAuth();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'user' | 'volunteer'>('user');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Already authenticated — AuthContext will redirect to dashboard
   if (isAuthenticated) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -29,10 +30,12 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      await signup(name, email, password, role);
     } catch (err: unknown) {
       setError(
-        err instanceof Error ? err.message : 'Login failed. Please try again.',
+        err instanceof Error
+          ? err.message
+          : 'Signup failed. Please try again.',
       );
     } finally {
       setLoading(false);
@@ -42,34 +45,49 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
       <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-        {/* Header */}
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Welcome Back
+            Create Account
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Sign in to your SegreGate account
+            Join the SegreGate community
           </p>
         </div>
 
-        {/* Error banner */}
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
             {error}
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label
-              htmlFor="email"
+              htmlFor="name"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              Full Name
+            </label>
+            <input
+              id="name"
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              placeholder="Jane Doe"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="signup-email"
               className="block text-sm font-medium text-gray-700 dark:text-gray-300"
             >
               Email
             </label>
             <input
-              id="email"
+              id="signup-email"
               type="email"
               required
               value={email}
@@ -81,34 +99,53 @@ export default function LoginPage() {
 
           <div>
             <label
-              htmlFor="password"
+              htmlFor="signup-password"
               className="block text-sm font-medium text-gray-700 dark:text-gray-300"
             >
               Password
             </label>
             <input
-              id="password"
+              id="signup-password"
               type="password"
               required
+              minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-              placeholder="••••••••"
+              placeholder="Min 8 characters"
             />
           </div>
 
+          <div>
+            <label
+              htmlFor="role"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              I am a…
+            </label>
+            <select
+              id="role"
+              value={role}
+              onChange={(e) => setRole(e.target.value as 'user' | 'volunteer')}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            >
+              <option value="user">Household Member</option>
+              <option value="volunteer">Community Volunteer</option>
+            </select>
+          </div>
+
           <Button type="submit" loading={loading} className="w-full">
-            Sign In
+            Create Account
           </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-          Don&apos;t have an account?{' '}
+          Already have an account?{' '}
           <Link
-            href="/signup"
+            href="/login"
             className="font-medium text-green-600 hover:text-green-500"
           >
-            Sign up
+            Sign in
           </Link>
         </p>
       </div>

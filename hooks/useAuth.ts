@@ -1,12 +1,18 @@
-import { useAuthContext } from "@/context/AuthContext";
+'use client';
 
-export function useAuth() {
-  const { user, isAuthenticated, login, logout } = useAuthContext();
+import { useContext } from 'react';
+import { AuthContext, AuthContextType } from '@/context/AuthContext';
 
-  return {
-    user,
-    isAuthenticated,
-    login,
-    logout,
-  };
+/**
+ * Custom hook to access authentication state and actions.
+ * Must be used within an AuthProvider.
+ */
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+
+  return context;
 }

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcrypt";
-import { prisma } from "@/lib/prisma";
-import { loginSchema } from "@/lib/schemas/authSchema";
-import { sendSuccess, sendError } from "@/lib/responseHandler";
-import { handleError, logger } from "@/lib/errorHandler";
-import { generateAccessToken, generateRefreshToken } from "@/lib/auth";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/src/lib/prisma";
+import { loginSchema } from "@/src/lib/schemas/authSchema";
+import { sendSuccess, sendError } from "@/src/lib/responseHandler";
+import { handleError, logger } from "@/src/lib/errorHandler";
+import { generateAccessToken, generateRefreshToken } from "@/src/lib/auth";
 import { ZodError } from "zod";
 
 /**
@@ -40,20 +40,19 @@ export async function POST(req: NextRequest) {
     const refreshToken = generateRefreshToken(user.id);
 
     // Create response with access token in body
-    const response = NextResponse.json(
-      sendSuccess(
-        {
-          accessToken,
-          user: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-          },
+    // sendSuccess() already returns a NextResponse — use it directly
+    const response = sendSuccess(
+      {
+        accessToken,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
         },
-        "Login successful",
-        200
-      )
+      },
+      "Login successful",
+      200
     );
 
     // Set refresh token as HTTP-only cookie (secure, sameSite)

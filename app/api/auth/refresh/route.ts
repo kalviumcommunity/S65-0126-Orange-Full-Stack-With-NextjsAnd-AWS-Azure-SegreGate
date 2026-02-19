@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { sendSuccess, sendError } from "@/lib/responseHandler";
-import { handleError, logger } from "@/lib/errorHandler";
-import { verifyRefreshToken, generateAccessToken } from "@/lib/auth";
+import { prisma } from "@/src/lib/prisma";
+import { sendSuccess, sendError } from "@/src/lib/responseHandler";
+import { handleError, logger } from "@/src/lib/errorHandler";
+import { verifyRefreshToken, generateAccessToken } from "@/src/lib/auth";
 
 /**
  * POST /api/auth/refresh

@@ -27,16 +27,16 @@ services:
       - ./public:/app/public
     restart: unless-stopped
 
-  # PostgreSQL Database
+  # PostgreSQL Database (using locally cached pgvector image which includes pg16)
   db:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg16
     container_name: postgres_db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: segregate_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:

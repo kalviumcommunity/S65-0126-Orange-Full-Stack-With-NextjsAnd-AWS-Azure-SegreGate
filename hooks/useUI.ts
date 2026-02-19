@@ -1,12 +1,18 @@
-import { useUIContext } from "@/context/UIContext";
+'use client';
 
-export function useUI() {
-  const { theme, toggleTheme, sidebarOpen, toggleSidebar } = useUIContext();
+import { useContext } from 'react';
+import { UIContext, UIContextType } from '@/context/UIContext';
 
-  return {
-    theme,
-    toggleTheme,
-    sidebarOpen,
-    toggleSidebar,
-  };
+/**
+ * Custom hook to access UI state (theme, sidebar).
+ * Must be used within a UIProvider.
+ */
+export function useUI(): UIContextType {
+  const context = useContext(UIContext);
+
+  if (!context) {
+    throw new Error('useUI must be used within a UIProvider');
+  }
+
+  return context;
 }
