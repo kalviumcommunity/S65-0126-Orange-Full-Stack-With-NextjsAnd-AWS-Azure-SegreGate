@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAccessToken, extractTokenFromHeader } from "@/lib/auth";
+import { verifyAccessTokenEdge, extractTokenFromHeader } from "@/src/lib/auth-edge";
 import {
   PROTECTED_ROUTES,
   ADMIN_ONLY_ROUTES,
   isAdmin,
-} from "@/config/roles";
-import { logger } from "@/lib/errorHandler";
-import { ALLOWED_ORIGINS, corsHeaders, getCorsOriginHeader } from "@/lib/security-headers";
+} from "@/src/config/roles";
+import { ALLOWED_ORIGINS, corsHeaders, getCorsOriginHeader } from "@/src/lib/security-headers";
 
 /**
  * Global middleware for authentication, authorization, and security
  * Protects specified routes, enforces role-based access control, and applies CORS
+ *
+ * Uses `jose` (Edge-compatible) for JWT verification instead of `jsonwebtoken`.
  *
  * Flow:
  * 1. Handle CORS pre-flight requests
@@ -19,14 +20,14 @@ import { ALLOWED_ORIGINS, corsHeaders, getCorsOriginHeader } from "@/lib/securit
  * 4. For admin routes, verify user has admin role
  * 5. Attach user info to request headers for use in route handlers
  */
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const origin = req.headers.get("origin") || "";
 
   // Handle CORS pre-flight requests
   if (req.method === "OPTIONS") {
     const allowedOrigin = getCorsOriginHeader(origin, ALLOWED_ORIGINS);
-    
+
     if (allowedOrigin) {
       return new NextResponse(null, {
         status: 200,
@@ -36,7 +37,7 @@ export function middleware(req: NextRequest) {
         },
       });
     }
-    
+
     return new NextResponse(null, { status: 204 });
   }
 
@@ -46,17 +47,16 @@ export function middleware(req: NextRequest) {
   );
 
   if (!isProtectedRoute) {
-    // For non-protected routes, still add CORS headers
     const response = NextResponse.next();
     const allowedOrigin = getCorsOriginHeader(origin, ALLOWED_ORIGINS);
-    
+
     if (allowedOrigin) {
       response.headers.set("Access-Control-Allow-Origin", allowedOrigin);
       Object.entries(corsHeaders).forEach(([key, value]) => {
         response.headers.set(key, value);
       });
     }
-    
+
     return response;
   }
 
@@ -65,7 +65,6 @@ export function middleware(req: NextRequest) {
   const token = extractTokenFromHeader(authHeader);
 
   if (!token) {
-    logger.error("Unauthorized: Missing token", { pathname });
     return NextResponse.json(
       {
         success: false,
@@ -77,11 +76,10 @@ export function middleware(req: NextRequest) {
     );
   }
 
-  // Verify JWT token
-  const user = verifyAccessToken(token);
+  // Verify JWT token (async — jose uses Web Crypto)
+  const user = await verifyAccessTokenEdge(token);
 
   if (!user) {
-    logger.error("Unauthorized: Invalid or expired token", { pathname });
     return NextResponse.json(
       {
         success: false,
@@ -94,14 +92,11 @@ export function middleware(req: NextRequest) {
   }
 
   // Check if route is admin-only
-  const isAdminRoute = ADMIN_ONLY_ROUTES.some((route) => pathname.startsWith(route));
+  const isAdminRoute = ADMIN_ONLY_ROUTES.some((route) =>
+    pathname.startsWith(route)
+  );
 
   if (isAdminRoute && !isAdmin(user.role)) {
-    logger.error("Forbidden: Admin access required", {
-      pathname,
-      userId: user.userId,
-      role: user.role,
-    });
     return NextResponse.json(
       {
         success: false,
@@ -118,12 +113,6 @@ export function middleware(req: NextRequest) {
   requestHeaders.set("x-user-id", String(user.userId));
   requestHeaders.set("x-user-email", user.email);
   requestHeaders.set("x-user-role", user.role);
-
-  logger.info("Authenticated request", {
-    pathname,
-    userId: user.userId,
-    role: user.role,
-  });
 
   // Continue to next handler with modified headers
   const response = NextResponse.next({
@@ -142,23 +131,13 @@ export function middleware(req: NextRequest) {
   }
 
   return response;
-    },
-  });
 }
 
 /**
  * Configure which routes this middleware should run on
- * Prevents running middleware on static assets, public files, etc.
  */
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files
-     */
     "/((?!_next/static|_next/image|favicon.ico|public).*)",
   ],
 };

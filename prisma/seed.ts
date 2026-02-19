@@ -5,10 +5,13 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
+  // Passwords: 'password123' hashed with bcrypt (10 rounds) — for seed/dev only
+  const SEED_PASSWORD = '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
+
   await prisma.user.createMany({
     data: [
-      { name: 'Alice', email: 'alice@example.com', role: 'admin' },
-      { name: 'Bob', email: 'bob@example.com', role: 'user' },
+      { name: 'Alice', email: 'alice@example.com', role: 'admin', password: SEED_PASSWORD },
+      { name: 'Bob', email: 'bob@example.com', role: 'user', password: SEED_PASSWORD },
     ],
     skipDuplicates: true,
   });

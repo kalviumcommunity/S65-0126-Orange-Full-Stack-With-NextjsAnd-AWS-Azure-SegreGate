@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
+import bcrypt from 'bcryptjs';
 import { prisma } from '@/src/lib/prisma';
 import { userCreateSchema } from '@/src/lib/schemas/userSchema';
 import { sendSuccess, sendError } from '@/src/lib/responseHandler';
@@ -68,6 +69,9 @@ export async function POST(req: Request) {
     // Validate sanitized input with Zod
     const validatedData = userCreateSchema.parse(sanitizedBody);
 
+    // Hash password before storing
+    const hashedPassword = await bcrypt.hash(validatedData.password, 10);
+
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: validatedData.email },
@@ -79,7 +83,7 @@ export async function POST(req: Request) {
 
     // Create user with sanitized data
     const user = await prisma.user.create({
-      data: validatedData,
+      data: { ...validatedData, password: hashedPassword },
       select: {
         id: true,
         name: true,

@@ -37,7 +37,7 @@ export interface AuthContextType {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /** Pages that require authentication — redirects to /login if not authed */
-const PROTECTED_PAGES = ['/dashboard', '/users', '/reports'];
+const PROTECTED_PAGES = ['/dashboard', '/users', '/reports', '/profile'];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);

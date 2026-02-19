@@ -5,7 +5,11 @@ import useSWR from 'swr';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { advancedFetcher } from '@/src/lib/fetcher';
+import { Card } from '@/components/ui/Card';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { EmptyState } from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
+import { Users, RefreshCw } from 'lucide-react';
 
 interface User {
   id: string;
@@ -23,16 +27,10 @@ export default function UsersPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
 
-  // SWR hook for fetching users
   const { data, error, isLoading, mutate } = useSWR<UsersResponse>(
     mounted && !authLoading ? '/api/users' : null,
     advancedFetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 60000, // 1 minute
-      focusThrottleInterval: 300000, // 5 minutes
-    }
+    { revalidateOnFocus: false, dedupingInterval: 60000 },
   );
 
   useEffect(() => {
@@ -42,11 +40,10 @@ export default function UsersPage() {
   if (!mounted || authLoading) {
     return (
       <div className="space-y-4">
-        <h1 className="text-3xl font-bold">Users</h1>
-        <div className="animate-pulse">
-          <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4"></div>
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Users</h1>
+        <div className="animate-pulse space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-14 rounded-lg bg-gray-200 dark:bg-gray-800" />
           ))}
         </div>
       </div>
@@ -55,83 +52,75 @@ export default function UsersPage() {
 
   if (!user) {
     return (
-      <div className="text-center py-12">
-        <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-        <p className="text-gray-600 dark:text-gray-300 mb-6">
-          You need to be logged in to view users.
-        </p>
-        <Link href="/login">
-          <Button variant="primary">Go to Login</Button>
-        </Link>
+      <div className="py-12 text-center">
+        <p className="text-gray-500 dark:text-gray-400">Please log in to view users.</p>
       </div>
     );
   }
 
+  const users = data?.data ?? [];
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Users Directory</h1>
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => mutate()}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Loading...' : 'Refresh'}
-          </Button>
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Users</h1>
+        <Button variant="secondary" size="sm" onClick={() => mutate()} disabled={isLoading}>
+          <RefreshCw className={`mr-1.5 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       {error && (
-        <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded">
-          <p className="font-bold">Error loading users</p>
-          <p className="text-sm">{error.message}</p>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+          Failed to load users.
         </div>
       )}
 
       {isLoading && !data && (
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
-            ></div>
+        <div className="animate-pulse space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-14 rounded-lg bg-gray-200 dark:bg-gray-800" />
           ))}
         </div>
       )}
 
-      {data && data.data.length > 0 && (
-        <div className="grid gap-4">
+      {!isLoading && users.length === 0 && (
+        <EmptyState
+          icon={<Users className="h-10 w-10" />}
+          title="No users found"
+          description="There are no registered users yet."
+        />
+      )}
+
+      {users.length > 0 && (
+        <Card padding="none">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-gray-300 dark:border-gray-600">
-                  <th className="text-left py-3 px-4 font-semibold">Email</th>
-                  <th className="text-left py-3 px-4 font-semibold">Role</th>
-                  <th className="text-left py-3 px-4 font-semibold">Joined</th>
-                  <th className="text-left py-3 px-4 font-semibold">Action</th>
+                <tr className="border-b border-gray-100 dark:border-gray-800">
+                  <th className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Email</th>
+                  <th className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Role</th>
+                  <th className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400">Joined</th>
+                  <th className="px-5 py-3 font-medium text-gray-500 dark:text-gray-400" />
                 </tr>
               </thead>
-              <tbody>
-                {data.data.map((u) => (
-                  <tr
-                    key={u.id}
-                    className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-                  >
-                    <td className="py-3 px-4">{u.email}</td>
-                    <td className="py-3 px-4">
-                      <span className="inline-block px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm font-medium">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {users.map((u) => (
+                  <tr key={u.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <td className="px-5 py-3 text-gray-900 dark:text-white">{u.email}</td>
+                    <td className="px-5 py-3">
+                      <StatusBadge
+                        variant={u.role === 'admin' ? 'danger' : u.role === 'volunteer' ? 'info' : 'default'}
+                      >
                         {u.role}
-                      </span>
+                      </StatusBadge>
                     </td>
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
+                    <td className="px-5 py-3 text-gray-500 dark:text-gray-400">
                       {new Date(u.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="px-5 py-3 text-right">
                       <Link href={`/users/${u.id}`}>
-                        <Button variant="secondary" size="sm">
-                          View Profile
-                        </Button>
+                        <Button variant="secondary" size="sm">View</Button>
                       </Link>
                     </td>
                   </tr>
@@ -139,21 +128,8 @@ export default function UsersPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       )}
-
-      {data && data.data.length === 0 && (
-        <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded">
-          <p className="text-gray-600 dark:text-gray-300">No users found</p>
-        </div>
-      )}
-
-      <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900 rounded border border-blue-200 dark:border-blue-700">
-        <p className="text-sm text-blue-700 dark:text-blue-200">
-          <strong>Cache Info:</strong> SWR caches this data for 1 minute. Click &quot;Refresh&quot; to fetch
-          manually or navigate away/back to revalidate.
-        </p>
-      </div>
     </div>
   );
 }

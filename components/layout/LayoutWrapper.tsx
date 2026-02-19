@@ -29,12 +29,12 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Header />
 
-      <div className="flex">
+      <div className="flex pt-14">
         {isAuthenticated && <Sidebar />}
 
         <main
-          className={`flex-1 transition-all duration-200 ${
-            isAuthenticated ? 'lg:ml-64' : ''
+          className={`min-h-[calc(100vh-3.5rem)] flex-1 transition-all duration-200 ${
+            isAuthenticated ? 'lg:ml-56' : ''
           }`}
         >
           <div className="p-6">{children}</div>

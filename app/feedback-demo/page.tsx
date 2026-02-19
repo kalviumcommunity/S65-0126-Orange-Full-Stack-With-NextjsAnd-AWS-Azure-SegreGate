@@ -56,7 +56,7 @@ export default function FeedbackDemoPage() {
                     <Button onClick={showSuccessToast} variant="primary" className="bg-green-600 hover:bg-green-700">
                         Show Success
                     </Button>
-                    <Button onClick={showErrorToast} variant="destructive">
+                    <Button onClick={showErrorToast} variant="danger">
                         Show Error
                     </Button>
                     <Button onClick={showLoadingToast} variant="secondary">
@@ -78,7 +78,7 @@ export default function FeedbackDemoPage() {
                     <Button onClick={() => setIsInfoModalOpen(true)} variant="secondary">
                         Open Info Modal
                     </Button>
-                    <Button onClick={() => setIsDeleteModalOpen(true)} variant="destructive">
+                    <Button onClick={() => setIsDeleteModalOpen(true)} variant="danger">
                         Open Destructive Modal
                     </Button>
                 </div>
@@ -118,7 +118,7 @@ export default function FeedbackDemoPage() {
                     <br />
                     Flow: Click Delete (Toast) → Confirmation Modal (Blocking) → Confirm → Processing (Loader) → Success (Toast).
                 </p>
-                <Button onClick={() => setIsDeleteModalOpen(true)} variant="destructive">
+                <Button onClick={() => setIsDeleteModalOpen(true)} variant="danger">
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete Critical Item
                 </Button>
@@ -159,7 +159,7 @@ export default function FeedbackDemoPage() {
                         </Button>
                         <Button
                             onClick={handleDelete}
-                            variant="destructive"
+                            variant="danger"
                             disabled={isDeleting}
                             className="min-w-[100px]"
                         >
