@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import useSWR from 'swr';
 import { useAuth } from '@/hooks/useAuth';
-import { advancedFetcher } from '@/src/lib/fetcher';
+import { useAuthenticatedSWR } from '@/hooks/useAuthenticatedSWR';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import {
@@ -64,9 +63,8 @@ interface ReportsResponse {
 export default function DashboardPage() {
   const { user } = useAuth();
 
-  const { data: reportsData } = useSWR<ReportsResponse>(
+  const { data: reportsData } = useAuthenticatedSWR<ReportsResponse>(
     user ? '/api/reports?limit=100' : null,
-    advancedFetcher,
     { revalidateOnFocus: false },
   );
 

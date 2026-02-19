@@ -1,10 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import useSWR from 'swr';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { advancedFetcher } from '@/src/lib/fetcher';
+import { useAuthenticatedSWR } from '@/hooks/useAuthenticatedSWR';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge, getStatusVariant, getQualityVariant } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -18,7 +17,12 @@ interface Report {
   description?: string;
   segregationQuality?: string;
   status: string;
+  photoUrl?: string;
   createdAt: string;
+  user?: {
+    name: string;
+    email: string;
+  };
 }
 
 interface ReportsResponse {
@@ -32,11 +36,10 @@ export default function VerifyReportsPage() {
   const { user, isLoading: authLoading, accessToken } = useAuth();
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
-  const { data, error, isLoading, mutate } = useSWR<ReportsResponse>(
+  const { data, error, isLoading, mutate } = useAuthenticatedSWR<ReportsResponse>(
     user && (user.role === 'volunteer' || user.role === 'admin')
-      ? '/api/reports?limit=50'
+      ? '/api/reports?status=pending&limit=50'
       : null,
-    advancedFetcher,
     { revalidateOnFocus: false },
   );
 
@@ -91,7 +94,8 @@ export default function VerifyReportsPage() {
   }
 
   const allReports = data?.data?.reports ?? [];
-  const pendingReports = allReports.filter((r) => r.status === 'pending');
+  // Reports are already filtered by status=pending on the server side
+  const pendingReports = allReports;
 
   return (
     <div className="space-y-6">
@@ -127,53 +131,81 @@ export default function VerifyReportsPage() {
       <div className="space-y-3">
         {pendingReports.map((report) => (
           <Card key={report.id}>
-            <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    Report #{report.id}
-                  </span>
-                  <StatusBadge variant={getStatusVariant(report.status)}>
-                    {report.status}
-                  </StatusBadge>
-                  {report.segregationQuality && (
-                    <StatusBadge variant={getQualityVariant(report.segregationQuality)}>
-                      {report.segregationQuality}
+            <div className="flex flex-col gap-4 p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      Report #{report.id}
+                    </span>
+                    <StatusBadge variant={getStatusVariant(report.status)}>
+                      {report.status}
                     </StatusBadge>
+                    {report.segregationQuality && (
+                      <StatusBadge variant={getQualityVariant(report.segregationQuality)}>
+                        {report.segregationQuality}
+                      </StatusBadge>
+                    )}
+                  </div>
+                  {report.user && (
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      Submitted by: {report.user.name} ({report.user.email})
+                    </p>
+                  )}
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {report.location || 'No location'} &middot;{' '}
+                    {new Date(report.createdAt).toLocaleDateString()}
+                  </p>
+                  {report.description && (
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      {report.description}
+                    </p>
                   )}
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {report.location || 'No location'} &middot;{' '}
-                  {new Date(report.createdAt).toLocaleDateString()}
-                </p>
-                {report.description && (
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    {report.description}
-                  </p>
-                )}
+
+                <div className="flex shrink-0 gap-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleVerify(report.id, 'approved')}
+                    disabled={updatingId === report.id}
+                    loading={updatingId === report.id}
+                  >
+                    <CheckCircle className="mr-1 h-4 w-4" />
+                    Approve
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => handleVerify(report.id, 'rejected')}
+                    disabled={updatingId === report.id}
+                  >
+                    <XCircle className="mr-1 h-4 w-4" />
+                    Reject
+                  </Button>
+                </div>
               </div>
 
-              <div className="flex shrink-0 gap-2">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => handleVerify(report.id, 'approved')}
-                  disabled={updatingId === report.id}
-                  loading={updatingId === report.id}
-                >
-                  <CheckCircle className="mr-1 h-4 w-4" />
-                  Approve
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => handleVerify(report.id, 'rejected')}
-                  disabled={updatingId === report.id}
-                >
-                  <XCircle className="mr-1 h-4 w-4" />
-                  Reject
-                </Button>
-              </div>
+              {/* Photo evidence */}
+              {report.photoUrl && (
+                <div className="mt-2">
+                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                    Photo Evidence:
+                  </p>
+                  <a
+                    href={report.photoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    <img
+                      src={report.photoUrl}
+                      alt={`Report #${report.id} evidence`}
+                      className="h-48 w-auto rounded-lg border border-gray-200 object-cover transition-transform hover:scale-105 dark:border-gray-700"
+                    />
+                  </a>
+                </div>
+              )}
             </div>
           </Card>
         ))}

@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import useSWR from 'swr';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { advancedFetcher } from '@/src/lib/fetcher';
+import { useAuthenticatedSWR } from '@/hooks/useAuthenticatedSWR';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -27,9 +26,8 @@ export default function UsersPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
 
-  const { data, error, isLoading, mutate } = useSWR<UsersResponse>(
-    mounted && !authLoading ? '/api/users' : null,
-    advancedFetcher,
+  const { data, error, isLoading, mutate } = useAuthenticatedSWR<UsersResponse>(
+    mounted && !authLoading && user?.role === 'admin' ? '/api/users' : null,
     { revalidateOnFocus: false, dedupingInterval: 60000 },
   );
 

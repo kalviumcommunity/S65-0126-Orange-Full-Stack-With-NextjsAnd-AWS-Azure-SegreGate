@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import useSWR from 'swr';
 import { useAuth } from '@/hooks/useAuth';
-import { advancedFetcher } from '@/src/lib/fetcher';
+import { useAuthenticatedSWR } from '@/hooks/useAuthenticatedSWR';
 import { Card } from '@/components/ui/Card';
 import { StatusBadge, getStatusVariant, getQualityVariant } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -38,9 +37,8 @@ export default function ReportsPage() {
   const [page, setPage] = useState(1);
   const limit = 10;
 
-  const { data, error, isLoading } = useSWR<ReportsResponse>(
+  const { data, error, isLoading } = useAuthenticatedSWR<ReportsResponse>(
     user ? `/api/reports?page=${page}&limit=${limit}` : null,
-    advancedFetcher,
     { revalidateOnFocus: false },
   );
 
