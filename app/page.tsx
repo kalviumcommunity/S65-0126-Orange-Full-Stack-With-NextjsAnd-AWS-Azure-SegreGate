@@ -125,6 +125,53 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── Responsive & Theme Showcase ────────────────────────────── */}
+      <section className="bg-white px-6 py-16 dark:bg-gray-950">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-white">
+            Responsive & Theme Aware
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-center text-gray-600 dark:text-gray-400">
+            This section demonstrates the custom brand colors and responsive
+            layout configured in <code>tailwind.config.js</code>.
+          </p>
+
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Brand Light */}
+            <div className="rounded-lg bg-brand-light p-6 text-center shadow-sm">
+              <p className="font-semibold text-gray-900">Brand Light</p>
+              <p className="text-sm text-gray-800">#93C5FD</p>
+            </div>
+
+            {/* Brand Default */}
+            <div className="rounded-lg bg-brand py-6 text-center shadow-sm">
+              <p className="font-semibold text-white">Brand Default</p>
+              <p className="text-sm text-white/90">#3B82F6</p>
+            </div>
+
+            {/* Brand Dark */}
+            <div className="rounded-lg bg-brand-dark p-6 text-center shadow-sm">
+              <p className="font-semibold text-white">Brand Dark</p>
+              <p className="text-sm text-white/90">#1E40AF</p>
+            </div>
+
+            {/* Responsive Card */}
+            <div className="rounded-lg border-2 border-dashed border-gray-300 p-6 text-center dark:border-gray-700">
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Current Breakpoint:
+              </p>
+              <p className="mt-1 text-lg font-bold text-gray-900 dark:text-white sm:text-brand md:text-brand-dark lg:text-brand-light">
+                <span className="block sm:hidden">Default (Mobile)</span>
+                <span className="hidden sm:block md:hidden">SM (Small)</span>
+                <span className="hidden md:block lg:hidden">MD (Medium)</span>
+                <span className="hidden lg:block xl:hidden">LG (Large)</span>
+                <span className="hidden xl:block">XL (Extra Large)</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
