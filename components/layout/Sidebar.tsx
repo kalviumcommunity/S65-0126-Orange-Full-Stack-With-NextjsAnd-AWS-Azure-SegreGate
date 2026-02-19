@@ -33,7 +33,8 @@ const NAV_ITEMS: NavItem[] = [
     href: '/reports/verify',
     roles: ['volunteer', 'admin'],
   },
-  { label: 'All Users', href: '/users', roles: ['admin'] },
+  { label: 'Users', href: '/users', roles: ['admin', 'volunteer'] },
+  { label: 'Contact', href: '/contact' },
 ];
 
 export default function Sidebar() {
