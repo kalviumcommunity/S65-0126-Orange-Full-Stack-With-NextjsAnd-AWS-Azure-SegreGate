@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
@@ -8,10 +9,15 @@ import Sidebar from '@/components/layout/Sidebar';
 /**
  * LayoutWrapper composes Header + Sidebar + main content area.
  * Shows a global loading spinner while auth state is initialising.
- * Sidebar only renders for authenticated users.
+ * Sidebar only renders for authenticated users (except on landing page).
  */
 export default function LayoutWrapper({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const pathname = usePathname();
+  
+  // Don't show sidebar on landing page even if authenticated
+  const isLandingPage = pathname === '/';
+  const showSidebar = isAuthenticated && !isLandingPage;
 
   // Global loading state while refreshing auth
   if (isLoading) {
@@ -30,11 +36,11 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
       <Header />
 
       <div className="flex pt-14">
-        {isAuthenticated && <Sidebar />}
+        {showSidebar && <Sidebar />}
 
         <main
           className={`min-h-[calc(100vh-3.5rem)] flex-1 transition-all duration-200 ${
-            isAuthenticated ? 'lg:ml-56' : ''
+            showSidebar ? 'lg:ml-56' : ''
           }`}
         >
           <div className="p-6">{children}</div>
