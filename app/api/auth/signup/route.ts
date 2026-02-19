@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcrypt";
-import { prisma } from "@/lib/prisma";
-import { signupSchema } from "@/lib/schemas/authSchema";
-import { sendSuccess, sendError } from "@/lib/responseHandler";
-import { handleError, logger } from "@/lib/errorHandler";
+import { prisma } from "@/src/lib/prisma";
+import { signupSchema } from "@/src/lib/schemas/authSchema";
+import { sendSuccess, sendError } from "@/src/lib/responseHandler";
+import { handleError, logger } from "@/src/lib/errorHandler";
 import { ZodError } from "zod";
 
 /**
