@@ -43,7 +43,7 @@ export const ROLE_PERMISSIONS = {
  * Protected routes that require authentication
  * Routes matched with startsWith() logic
  */
-export const PROTECTED_ROUTES = ["/api/reports", "/api/users", "/api/admin"];
+export const PROTECTED_ROUTES = ["/api/reports", "/api/users", "/api/upload", "/api/admin"];
 
 /**
  * Admin-only routes

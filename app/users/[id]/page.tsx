@@ -3,8 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { Card } from '@/components/ui/Card';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import Button from '@/components/ui/Button';
 import Link from 'next/link';
+import { ArrowLeft, Mail, Shield, Calendar } from 'lucide-react';
 
 interface UserProfile {
   id: number;
@@ -46,7 +49,6 @@ export default function UserProfilePage() {
     fetchUser();
   }, [params.id, accessToken]);
 
-  /* ── Loading state ──────────────────────────────────────────────── */
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
@@ -55,13 +57,15 @@ export default function UserProfilePage() {
     );
   }
 
-  /* ── Error state ────────────────────────────────────────────────── */
   if (error) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4">
-        <p className="text-red-600 dark:text-red-400">{error}</p>
-        <Link href="/dashboard">
-          <Button variant="secondary">Back to Dashboard</Button>
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <Link href="/users">
+          <Button variant="secondary" size="sm">
+            <ArrowLeft className="mr-1.5 h-4 w-4" />
+            Back to Users
+          </Button>
         </Link>
       </div>
     );
@@ -69,42 +73,58 @@ export default function UserProfilePage() {
 
   if (!profile) return null;
 
-  /* ── Profile view ───────────────────────────────────────────────── */
+  const details = [
+    { icon: Mail, label: 'Email', value: profile.email },
+    { icon: Shield, label: 'Role', value: profile.role, badge: true },
+    { icon: Calendar, label: 'Joined', value: new Date(profile.createdAt).toLocaleDateString() },
+  ];
+
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-        <div className="flex items-center gap-4">
-          {/* Avatar placeholder */}
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-2xl font-bold text-green-600 dark:bg-green-900/30 dark:text-green-400">
-            {profile.name.charAt(0).toUpperCase()}
+    <div className="mx-auto max-w-lg space-y-4">
+      <Link
+        href="/users"
+        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Users
+      </Link>
+
+      <Card>
+        <div className="p-6">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-50 text-xl font-bold text-green-600 dark:bg-green-900/20 dark:text-green-400">
+              {profile.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                {profile.name}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{profile.email}</p>
+            </div>
           </div>
 
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {profile.name}
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400">{profile.email}</p>
-          </div>
+          <dl className="mt-6 space-y-4">
+            {details.map((d) => {
+              const Icon = d.icon;
+              return (
+                <div key={d.label} className="flex items-center gap-3">
+                  <Icon className="h-4 w-4 shrink-0 text-gray-400" />
+                  <dt className="w-16 text-sm text-gray-500 dark:text-gray-400">{d.label}</dt>
+                  <dd className="text-sm font-medium text-gray-900 dark:text-white">
+                    {d.badge ? (
+                      <StatusBadge variant={profile.role === 'admin' ? 'danger' : profile.role === 'volunteer' ? 'info' : 'default'}>
+                        {d.value}
+                      </StatusBadge>
+                    ) : (
+                      d.value
+                    )}
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
         </div>
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Role</p>
-            <p className="mt-1 font-semibold capitalize text-gray-900 dark:text-white">
-              {profile.role}
-            </p>
-          </div>
-
-          <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Member Since
-            </p>
-            <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-              {new Date(profile.createdAt).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-      </div>
+      </Card>
     </div>
   );
 }

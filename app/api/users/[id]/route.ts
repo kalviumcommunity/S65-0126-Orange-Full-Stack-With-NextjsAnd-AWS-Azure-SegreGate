@@ -7,9 +7,10 @@ interface Params {
   id: string;
 }
 
-export async function GET(req: Request, { params }: { params: Params }) {
+export async function GET(req: Request, { params }: { params: Promise<Params> }) {
+  const { id } = await params;
   try {
-    const userId = parseInt(params.id, 10);
+    const userId = parseInt(id, 10);
 
     if (isNaN(userId)) {
       return sendError('Invalid user ID', 'INVALID_ID', 400);
@@ -32,6 +33,6 @@ export async function GET(req: Request, { params }: { params: Params }) {
 
     return sendSuccess(user, 'User fetched successfully');
   } catch (error) {
-    return handleError(error, `GET /api/users/${params.id}`);
+    return handleError(error, `GET /api/users/${id}`);
   }
 }

@@ -123,7 +123,9 @@ export const ALLOWED_ORIGINS = process.env.NODE_ENV === 'production' ? [
   process.env.ADMIN_URL || 'https://admin.segregate.example.com',
 ] : [
   'http://localhost:3000',
+  'http://localhost:3001',
   'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
 ];
 
 /**

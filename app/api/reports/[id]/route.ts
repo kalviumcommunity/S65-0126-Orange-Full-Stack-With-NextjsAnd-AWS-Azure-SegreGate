@@ -9,9 +9,10 @@ interface Params {
   id: string;
 }
 
-export async function GET(req: Request, { params }: { params: Params }) {
+export async function GET(req: Request, { params }: { params: Promise<Params> }) {
+  const { id } = await params;
   try {
-    const reportId = parseInt(params.id, 10);
+    const reportId = parseInt(id, 10);
 
     if (isNaN(reportId)) {
       return sendError('Invalid report ID', 'INVALID_ID', 400);
@@ -35,13 +36,14 @@ export async function GET(req: Request, { params }: { params: Params }) {
 
     return sendSuccess(report, 'Report fetched successfully');
   } catch (error) {
-    return handleError(error, `GET /api/reports/${params.id}`);
+    return handleError(error, `GET /api/reports/${id}`);
   }
 }
 
-export async function PUT(req: Request, { params }: { params: Params }) {
+export async function PUT(req: Request, { params }: { params: Promise<Params> }) {
+  const { id } = await params;
   try {
-    const reportId = parseInt(params.id, 10);
+    const reportId = parseInt(id, 10);
 
     if (isNaN(reportId)) {
       return sendError('Invalid report ID', 'INVALID_ID', 400);
@@ -85,6 +87,6 @@ export async function PUT(req: Request, { params }: { params: Params }) {
         error.errors.map((e) => ({ field: e.path.join('.'), message: e.message }))
       );
     }
-    return handleError(error, `PUT /api/reports/${params.id}`);
+    return handleError(error, `PUT /api/reports/${id}`);
   }
 }

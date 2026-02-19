@@ -3,7 +3,9 @@
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { Card } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import { LogIn } from 'lucide-react';
 
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
@@ -41,8 +43,8 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
-      <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-        {/* Header */}
+      <Card className="w-full max-w-md">
+        <div className="p-8">
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             Welcome Back
@@ -111,7 +113,8 @@ export default function LoginPage() {
             Sign up
           </Link>
         </p>
-      </div>
+        </div>
+      </Card>
     </div>
   );
 }
