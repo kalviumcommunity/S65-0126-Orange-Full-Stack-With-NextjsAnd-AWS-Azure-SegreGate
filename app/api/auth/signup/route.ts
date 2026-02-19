@@ -34,13 +34,18 @@ export async function POST(req: NextRequest) {
     // Hash password with bcrypt (10 salt rounds)
     const hashedPassword = await bcrypt.hash(validatedData.password, 10);
 
+    // SECURITY: Users cannot self-assign privileged roles
+    // Only 'user' role is allowed during self-registration
+    // Admin can assign other roles through the admin user management API
+    const allowedRole = 'user';
+
     // Create new user
     const user = await prisma.user.create({
       data: {
         name: validatedData.name,
         email: validatedData.email,
         password: hashedPassword,
-        role: validatedData.role || "user",
+        role: allowedRole,
       },
       select: {
         id: true,
