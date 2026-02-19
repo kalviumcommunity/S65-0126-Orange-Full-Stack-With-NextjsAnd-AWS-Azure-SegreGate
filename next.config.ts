@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { securityHeadersConfig } from "./src/lib/security-headers";
 
 const nextConfig: NextConfig = {
   /* Environment-aware configuration */
@@ -12,6 +13,11 @@ const nextConfig: NextConfig = {
   // Disable SWR for static exports if needed
   experimental: {
     optimizePackageImports: ["@tailwindcss/postcss"],
+  },
+
+  // Security headers configuration
+  async headers() {
+    return securityHeadersConfig;
   },
 
   /* config options here */

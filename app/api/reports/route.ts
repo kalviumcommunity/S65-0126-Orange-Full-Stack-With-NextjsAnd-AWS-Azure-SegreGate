@@ -4,6 +4,7 @@ import { prisma } from '@/src/lib/prisma';
 import { reportCreateSchema } from '@/src/lib/schemas/reportSchema';
 import { sendSuccess, sendError } from '@/src/lib/responseHandler';
 import { handleError } from '@/src/lib/errorHandler';
+import { sanitizeHtmlInput, sanitizeUrl, isInputSafe } from '@/src/lib/sanitize';
 
 export async function GET(req: Request) {
   try {
@@ -48,8 +49,21 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // Validate input with Zod
-    const validatedData = reportCreateSchema.parse(body);
+    // Sanitize input to prevent XSS and injection attacks
+    const sanitizedBody = {
+      ...body,
+      location: sanitizeHtmlInput(body.location || ''),
+      description: body.description ? sanitizeHtmlInput(body.description) : undefined,
+      photoUrl: body.photoUrl ? sanitizeUrl(body.photoUrl) : undefined,
+    };
+
+    // Additional safety validation
+    if (!isInputSafe(body.location)) {
+      return sendError('Input contains potentially malicious content', 'UNSAFE_INPUT', 400);
+    }
+
+    // Validate sanitized input with Zod
+    const validatedData = reportCreateSchema.parse(sanitizedBody);
 
     // Verify user exists
     const userExists = await prisma.user.findUnique({
@@ -60,7 +74,7 @@ export async function POST(req: Request) {
       return sendError('User not found', 'USER_NOT_FOUND', 404);
     }
 
-    // Create report
+    // Create report with sanitized data
     const report = await prisma.report.create({
       data: validatedData,
       select: {
