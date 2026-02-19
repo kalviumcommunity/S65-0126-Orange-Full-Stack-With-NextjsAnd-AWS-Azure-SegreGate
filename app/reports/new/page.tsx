@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import useSWR from 'swr';
@@ -13,8 +14,6 @@ import Button from '@/components/ui/Button';
 export default function ReportSubmissionPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -69,34 +68,37 @@ export default function ReportSubmissionPage() {
 
   const onSubmit = async (values: ReportSubmitInput) => {
     setIsSubmitting(true);
-    setSubmitError(null);
-    setSubmitSuccess(false);
 
-    try {
-      const response = await fetch('/api/reports', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(values),
-      });
+    const submitPromise = new Promise(async (resolve, reject) => {
+      try {
+        const response = await fetch('/api/reports', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(values),
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to submit report');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to submit report');
+        }
+
+        await response.json();
+        reset();
+        mutateReports?.();
+        resolve('Report submitted successfully!');
+      } catch (error) {
+        reject(error instanceof Error ? error.message : 'An error occurred');
+      } finally {
+        setIsSubmitting(false);
       }
+    });
 
-      await response.json();
-      setSubmitSuccess(true);
-      reset();
-      mutateReports?.();
-
-      // Auto-hide success message after 3 seconds
-      setTimeout(() => setSubmitSuccess(false), 3000);
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'An error occurred');
-    } finally {
-      setIsSubmitting(false);
-    }
+    toast.promise(submitPromise, {
+      loading: 'Submitting report...',
+      success: (msg) => `${msg}`,
+      error: (err) => `Error: ${err}`,
+    });
   };
 
   return (
@@ -107,19 +109,6 @@ export default function ReportSubmissionPage() {
           Help us improve waste management by reporting segregation quality at your location.
         </p>
       </div>
-
-      {submitSuccess && (
-        <div className="bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-200 px-4 py-3 rounded">
-          <p className="font-bold">✓ Report submitted successfully!</p>
-        </div>
-      )}
-
-      {submitError && (
-        <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded">
-          <p className="font-bold">Error</p>
-          <p className="text-sm">{submitError}</p>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <FormInput
@@ -175,7 +164,6 @@ export default function ReportSubmissionPage() {
             variant="secondary"
             onClick={() => {
               reset();
-              setSubmitError(null);
             }}
             disabled={isSubmitting}
           >

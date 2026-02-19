@@ -46,9 +46,11 @@ model Report {
   id         Int      @id @default(autoincrement())
   userId     Int
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  photoUrl   String?
-  location   String?
-  status     String   @default("pending")
+  photoUrl          String?
+  location          String?
+  description       String?
+  segregationQuality String?
+  status            String   @default("pending")
   createdAt  DateTime @default(now())
 
   @@index([userId])

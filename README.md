@@ -1569,3 +1569,57 @@ curl -I http://localhost:3000
 **For detailed security implementation:**
 See [SECURITY.md](./SECURITY.md) — Complete guide with examples, testing, and recommendations.
 
+
+## Interactive Feedback UI
+
+The application includes a comprehensive feedback system to enhance user experience through clear communication of states (success, error, processing, warning).
+
+### 1. Feedback Layers
+
+| Type | UI Element | Use Case |
+|------|------------|----------|
+| **Instant** | Toast (React Hot Toast) | "Report submitted", "Profile updated" |
+| **Blocking** | Modal (Custom) | "Delete Report?", "Confirm Action" |
+| **Process** | Loader (Spinner) | "Submitting...", "Loading data" |
+
+### 2. Implementation Details
+
+- **Toasts**: Configured globally via `ToastProvider` in `app/layout.tsx`. Triggered using `toast.success()`, `toast.error()`, or `toast.promise()` for async flows.
+- **Modals**: Reusable `Modal` component with accessibility features (focus trap, escape key, ARIA roles).
+- **Loaders**: Scalable `Loader` component using Tailwind CSS animations.
+
+### 3. Usage Examples
+
+**Async Action with Toast:**
+```tsx
+toast.promise(submitReport(), {
+  loading: 'Submitting...',
+  success: 'Report submitted!',
+  error: 'Failed to submit'
+});
+```
+
+**Blocking Confirmation Modal:**
+```tsx
+<Modal
+  isOpen={isOpen}
+  title="Delete Item?"
+  description="This action cannot be undone."
+  variant="destructive"
+  onClose={close}
+  footer={<Button onClick={handleDelete}>Delete</Button>}
+>
+  <p>Are you sure?</p>
+</Modal>
+```
+
+### 4. UX Principles
+
+- **Non-intrusive**: Toasts disappear automatically to avoid clutter.
+- **Accessible**: Modals manage focus and support keyboard navigation.
+- **Informative**: Loaders provide visual feedback during wait times to reduce perceived latency.
+- **Consistent**: Unified design tokens (colors, typography) across all feedback elements.
+
+### 5. Live Demo
+
+Visit `/feedback-demo` to see all feedback elements in action.
