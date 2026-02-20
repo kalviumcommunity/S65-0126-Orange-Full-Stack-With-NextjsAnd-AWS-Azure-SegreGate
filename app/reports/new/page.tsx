@@ -4,10 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import useSWR from 'swr';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthenticatedSWR } from '@/hooks/useAuthenticatedSWR';
 import { reportSubmitSchema, type ReportSubmitInput } from '@/src/lib/schemas/formSchema';
-import { advancedFetcher } from '@/src/lib/fetcher';
 import { ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE_BYTES } from '@/src/lib/s3';
 import FormInput from '@/components/form/FormInput';
 import Button from '@/components/ui/Button';
@@ -44,9 +43,8 @@ export default function ReportSubmissionPage() {
     },
   });
 
-  const { mutate: mutateReports } = useSWR(
+  const { mutate: mutateReports } = useAuthenticatedSWR(
     mounted && !authLoading && user ? '/api/reports' : null,
-    advancedFetcher,
     { revalidateOnFocus: false }
   );
 

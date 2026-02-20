@@ -49,6 +49,16 @@ export async function PUT(req: Request, { params }: { params: Promise<Params> })
       return sendError('Invalid report ID', 'INVALID_ID', 400);
     }
 
+    // Get user info from middleware headers
+    const userIdHeader = req.headers.get('x-user-id');
+    const userRole = req.headers.get('x-user-role');
+
+    if (!userIdHeader) {
+      return sendError('Unauthorized', 'UNAUTHORIZED', 401);
+    }
+
+    const userId = parseInt(userIdHeader, 10);
+
     const body = await req.json();
 
     // Validate update data with Zod
@@ -63,6 +73,29 @@ export async function PUT(req: Request, { params }: { params: Promise<Params> })
       return sendError('Report not found', 'NOT_FOUND', 404);
     }
 
+    // Authorization check:
+    // - Only the report owner can update their own report (location, description, etc.)
+    // - Only admin/volunteer can change status (approve/reject)
+    const isOwner = existingReport.userId === userId;
+    const isVerifier = userRole === 'admin' || userRole === 'volunteer';
+    const isStatusChange = validatedData.status !== undefined;
+
+    if (isStatusChange && !isVerifier) {
+      return sendError(
+        'Only volunteers and admins can approve or reject reports',
+        'FORBIDDEN',
+        403
+      );
+    }
+
+    if (!isStatusChange && !isOwner && !isVerifier) {
+      return sendError(
+        'You can only update your own reports',
+        'FORBIDDEN',
+        403
+      );
+    }
+
     // Update report
     const updatedReport = await prisma.report.update({
       where: { id: reportId },
@@ -71,6 +104,8 @@ export async function PUT(req: Request, { params }: { params: Promise<Params> })
         id: true,
         userId: true,
         location: true,
+        description: true,
+        segregationQuality: true,
         status: true,
         photoUrl: true,
         createdAt: true,

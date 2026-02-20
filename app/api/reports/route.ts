@@ -12,8 +12,33 @@ export async function GET(req: Request) {
     const page = Number(searchParams.get('page')) || 1;
     const limit = Number(searchParams.get('limit')) || 10;
     const skip = (page - 1) * limit;
+    const statusFilter = searchParams.get('status'); // Optional filter: pending, approved, rejected
+
+    // Get user info from middleware headers
+    const userIdHeader = req.headers.get('x-user-id');
+    const userRole = req.headers.get('x-user-role');
+
+    if (!userIdHeader) {
+      return sendError('Unauthorized', 'UNAUTHORIZED', 401);
+    }
+
+    const userId = parseInt(userIdHeader, 10);
+
+    // Build where clause based on user role
+    // - admin/volunteer: can see all reports
+    // - user: can only see their own reports
+    const whereClause: { userId?: number; status?: string } = {};
+    
+    if (userRole !== 'admin' && userRole !== 'volunteer') {
+      whereClause.userId = userId;
+    }
+
+    if (statusFilter) {
+      whereClause.status = statusFilter;
+    }
 
     const reports = await prisma.report.findMany({
+      where: whereClause,
       select: {
         id: true,
         userId: true,
@@ -21,14 +46,21 @@ export async function GET(req: Request) {
         description: true,
         segregationQuality: true,
         status: true,
+        photoUrl: true,
         createdAt: true,
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
       },
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
     });
 
-    const total = await prisma.report.count();
+    const total = await prisma.report.count({ where: whereClause });
 
     return sendSuccess(
       {

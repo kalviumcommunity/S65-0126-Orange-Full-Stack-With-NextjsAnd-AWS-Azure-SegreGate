@@ -4,10 +4,12 @@ import { ReactNode } from 'react';
 import { cn } from '@/src/lib/utils';
 
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info';
+type BadgeSize = 'sm' | 'md';
 
 interface StatusBadgeProps {
   children: ReactNode;
   variant?: BadgeVariant;
+  size?: BadgeSize;
   className?: string;
 }
 
@@ -19,12 +21,18 @@ const variantClasses: Record<BadgeVariant, string> = {
   info: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
 };
 
-export function StatusBadge({ children, variant = 'default', className }: StatusBadgeProps) {
+const sizeClasses: Record<BadgeSize, string> = {
+  sm: 'px-2 py-0.5 text-[10px]',
+  md: 'px-2.5 py-0.5 text-xs',
+};
+
+export function StatusBadge({ children, variant = 'default', size = 'md', className }: StatusBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize',
+        'inline-flex items-center rounded-full font-medium capitalize',
         variantClasses[variant],
+        sizeClasses[size],
         className,
       )}
     >
